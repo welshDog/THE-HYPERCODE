@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "hypercode"
+version = "0.1.0"
+description = "Programming language for neurodivergent brains. Multi-paradigm with textual + visual syntax."
+authors = ["Lyndz Williams <welshdog@example.com>"]
+license = "CC-BY 4.0"
+readme = "README.md"
+repository = "https://github.com/welshDog/hypercode"
+keywords = ["programming", "language", "neurodivergent", "quantum", "molecular", "accessibility"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+antlr4-python3-runtime = "^4.13"
+qiskit = "^0.43"
+qiskit-aer = "^0.13"
+pydantic = "^2.0"
+typing-extensions = "^4.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.0"
+pytest-cov = "^4.0"
+black = "^23.0"
+flake8 = "^6.0"
+mypy = "^1.0"
+ipython = "^8.0"
+
+[tool.poetry.scripts]
+hypercode = "hypercode.cli:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
