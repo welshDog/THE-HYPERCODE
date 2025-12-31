@@ -11,7 +11,7 @@ from hypercode.results import ExecutionResult
 
 def execute(
     code_string: str,
-    use_quantum_sim: bool = True,
+    backend_name: str = "qiskit",
     shots: int = 1024,
     seed: Optional[int] = None,
 ) -> ExecutionResult:
@@ -22,7 +22,7 @@ def execute(
 
     Args:
         code_string: A string containing the HyperCode program.
-        use_quantum_sim: Whether to execute quantum circuits using the Qiskit simulator.
+        backend_name: The name of the backend to use for execution (e.g., "qiskit").
         shots: The number of shots to use in the quantum simulation.
         seed: The random seed for the quantum simulator.
 
@@ -35,7 +35,7 @@ def execute(
 
         # 2. Set up and run the evaluator
         evaluator = Evaluator(
-            use_quantum_sim=use_quantum_sim,
+            backend_name=backend_name,
             shots=shots,
             seed=seed,
         )

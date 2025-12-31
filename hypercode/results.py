@@ -5,7 +5,7 @@ Data structures for holding the results of a HyperCode execution.
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from hypercode.ast.nodes import ASTNode
+from hypercode.ast import ASTNode
 from hypercode.ir.qir_nodes import QIR
 
 

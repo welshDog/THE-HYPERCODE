@@ -1,5 +1,5 @@
-from dataclasses import dataclass
-from typing import List, Union, Optional
+from dataclasses import dataclass, field
+from typing import List, Union, Optional, Dict, Any
 
 @dataclass
 class QInstr:
@@ -49,3 +49,22 @@ class QModule:
         for instr in self.instructions:
             lines.append(f"  {str(instr)}")
         return "\n".join(lines)
+
+@dataclass
+class QIR:
+    """
+    Quantum Intermediate Representation (QIR) of a HyperCode program.
+    
+    Attributes:
+        modules: Dictionary mapping module names to QModule objects
+        metadata: Additional metadata about the QIR
+    """
+    modules: Dict[str, QModule] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    
+    def add_module(self, module: QModule) -> None:
+        """Add a QModule to the QIR."""
+        self.modules[module.name] = module
+    
+    def __str__(self) -> str:
+        return "\n\n".join(str(module) for module in self.modules.values())

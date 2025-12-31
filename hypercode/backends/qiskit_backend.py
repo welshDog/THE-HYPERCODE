@@ -1,6 +1,9 @@
 from typing import Optional, Any, Dict, List
 import sys
 
+from .base import BaseBackend
+from hypercode.ir.qir_nodes import QModule, QAlloc, QGate, QMeasure
+
 # Optional import
 try:
     from qiskit import QuantumCircuit, transpile
@@ -34,9 +37,7 @@ if QISKIT_AVAILABLE:
             except ImportError:
                 SIMULATOR_BACKEND = None
 
-from hypercode.ir.qir_nodes import QModule, QAlloc, QGate, QMeasure
-
-class QiskitBackend:
+class QiskitBackend(BaseBackend):
     def __init__(self):
         if not QISKIT_AVAILABLE:
             pass # Silent fail until usage
@@ -102,7 +103,7 @@ class QiskitBackend:
                 
         return qc, clbit_map
 
-    def run(self, module: QModule, shots: int = 1024, seed: int = None) -> Dict[str, int]:
+    def execute(self, ir_module: QModule, shots: int = 1024, seed: int = None) -> Dict[str, int]:
         """
         Compile and run the circuit on the detected simulator.
         Returns a dictionary of counts (e.g., {'00': 500, '11': 524}).
@@ -111,7 +112,7 @@ class QiskitBackend:
             print("Warning: Qiskit not found. Returning empty results.", file=sys.stderr)
             return {}
             
-        qc, _ = self.compile(module)
+        qc, _ = self.compile(ir_module)
         
         if not SIMULATOR_BACKEND:
             print("Warning: No Qiskit simulator found (Aer/BasicProvider/BasicAer missing).", file=sys.stderr)
@@ -137,11 +138,3 @@ class QiskitBackend:
             print(f"Execution Error ({SIMULATOR_NAME}): {e}", file=sys.stderr)
             return {}
 
-def to_qiskit(module: QModule) -> Any:
-    backend = QiskitBackend()
-    qc, _ = backend.compile(module)
-    return qc
-
-def run_qiskit(module: QModule, shots: int = 1024, seed: int = None) -> Dict[str, int]:
-    backend = QiskitBackend()
-    return backend.run(module, shots=shots, seed=seed)

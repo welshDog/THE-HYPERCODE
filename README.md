@@ -7,6 +7,8 @@
 [![License: CC-BY 4.0](https://img.shields.io/badge/License-CC--BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 [![Status: Phase 2 - Implementation](https://img.shields.io/badge/Status-Phase%202%20--%20Implementation-blue)]()
 [![Built for](https://img.shields.io/badge/Built%20for-ADHD%20%7C%20Dyslexia%20%7C%20Autism-ff69b4)](#neurodivergent-first-design)
+[![Python Version](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 ---
 
@@ -21,6 +23,43 @@ For neurodivergent coders, typical languages often don't fit brain patterns. Hyp
 - **Autistic brains:** Explicit rules, no hidden behavior, domain-specific precision
 
 ---
+
+## 🚀 Installation
+
+HyperCode requires Python 3.10 or higher. We recommend using a virtual environment.
+
+### Using pip
+
+```bash
+# Create and activate a virtual environment (recommended)
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install core HyperCode
+pip install hypercode
+
+# Install optional dependencies
+pip install "hypercode[quantum]"  # For quantum computing support
+# pip install "hypercode[molecular]"  # For molecular computing (coming soon)
+```
+
+### Development Installation
+
+For development, clone the repository and install in editable mode:
+
+```bash
+git clone https://github.com/welshDog/hypercode.git
+cd hypercode
+
+# Install with development dependencies
+pip install -e ".[dev]"
+
+# Install optional dependencies for development
+pip install -e ".[quantum,dev]"
+
+# Run tests
+pytest
+```
 
 ## ✨ Features
 

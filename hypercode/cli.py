@@ -67,7 +67,7 @@ def run_command(args):
             
             # Pass options to Evaluator
             evaluator = Evaluator(
-                use_quantum_sim=(backend == "qiskit"),
+                backend_name=backend,
                 shots=shots,
                 seed=seed
             )
