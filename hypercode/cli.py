@@ -108,7 +108,7 @@ def parse_command(args):
         print_error(f"Error parsing {file_path}: {str(e)}")
         sys.exit(1)
 
-def qir_command(args):
+def qir_command(args: argparse.Namespace) -> None:
     """Handle the qir command."""
     file_path = args.file
     print_header(f"GENERATING QUANTUM IR FOR: {file_path}")
@@ -158,7 +158,7 @@ def version_command(args):
     print("A neurodivergent-first programming language")
     print("https://github.com/welshDog/THE-HYPERCODE")
 
-def main():
+def main() -> None:
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
         description=f"{Colors.BLUE}{Colors.BOLD}HyperCode: A neurodivergent-first programming language{Colors.ENDC}",

@@ -171,17 +171,23 @@ class Evaluator:
                 if isinstance(v, (int, float))
             }
             
-            # Lower the quantum circuit to QIR
-            qir = lower_circuit(stmt, constants=constants)
+            # Lower the quantum circuit to QModule
+            module = lower_circuit(stmt, constants=constants)
+            
+            # Store the module in variables for reference
+            self.variables[stmt.name] = module
+            
+            # Wrap in QIR for consistency/storage
+            qir = QIR(modules={module.name: module})
             self.qir = qir
             
             # Execute using the backend if available
             if self.backend is not None:
-                # Use the first module in the QIR
-                module = next(iter(qir.modules.values()))
+                # Execute using the backend directly
+                result = self.backend.execute(module, shots=self.shots, seed=self.seed)
                 
-                # Execute using the module-level run_qiskit function
-                result = run_qiskit(module, shots=self.shots, seed=self.seed)
+                # Store results in variables
+                self.variables[f"{stmt.name}_results"] = result
                 
                 # Print and store the results
                 result_str = ", ".join(f"{k}: {v}" for k, v in result.items())

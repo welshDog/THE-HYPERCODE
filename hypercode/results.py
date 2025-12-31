@@ -5,7 +5,7 @@ Data structures for holding the results of a HyperCode execution.
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from hypercode.ast import ASTNode
+from hypercode.ast.nodes import Node
 from hypercode.ir.qir_nodes import QIR
 
 
@@ -21,6 +21,6 @@ class ExecutionResult:
         error: Any error message produced during execution.
     """
     result: Any
-    ast: ASTNode
+    ast: Node
     qir: Optional[QIR] = None
     error: Optional[str] = None

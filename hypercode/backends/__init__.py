@@ -4,6 +4,9 @@ Backend registration and loading module.
 from typing import Dict, Type
 
 from .base import BaseBackend
+# Alias BaseBackend as Backend for convenience
+Backend = BaseBackend
+
 from .qiskit_backend import QiskitBackend
 # Import other backends here as they are created
 # from .classical_backend import ClassicalBackend

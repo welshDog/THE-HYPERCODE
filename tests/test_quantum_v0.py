@@ -91,19 +91,23 @@ def test_evaluate_quantum_mock_backend():
     @end
     """
     
-    # Mock run_qiskit
+    # Mock backend execution
     from unittest.mock import patch, MagicMock
     from hypercode.ir.qir_nodes import QModule
     
     mock_results = {"c0": 100}
     
-    with patch('hypercode.interpreter.evaluator.run_qiskit', return_value=mock_results) as mock_run:
+    # We patch get_backend to return a mock backend
+    with patch('hypercode.interpreter.evaluator.get_backend') as mock_get_backend:
+        mock_backend = MagicMock()
+        mock_backend.execute.return_value = mock_results
+        mock_get_backend.return_value = mock_backend
+        
         evaluator = Evaluator(use_quantum_sim=True, shots=500, seed=42)
         evaluator.evaluate(parse(code))
         
-        # Verify run_qiskit was called
-        assert mock_run.called
-        args, kwargs = mock_run.call_args
+        assert mock_backend.execute.called
+        args, kwargs = mock_backend.execute.call_args
         
         # Check arguments
         ir_module = args[0]

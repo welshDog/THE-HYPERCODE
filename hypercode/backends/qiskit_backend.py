@@ -1,4 +1,4 @@
-from typing import Optional, Any, Dict, List
+from typing import Optional, Any, Dict, List, Tuple
 import sys
 
 from .base import BaseBackend
@@ -42,7 +42,7 @@ class QiskitBackend(BaseBackend):
         if not QISKIT_AVAILABLE:
             pass # Silent fail until usage
 
-    def compile(self, module: QModule) -> Optional[QuantumCircuit]:
+    def compile(self, module: QModule) -> Tuple[Any, Dict[str, int]]:
         if not QISKIT_AVAILABLE:
             raise ImportError("Qiskit is not installed. Please install it to use the Qiskit backend.")
 
@@ -103,7 +103,7 @@ class QiskitBackend(BaseBackend):
                 
         return qc, clbit_map
 
-    def execute(self, ir_module: QModule, shots: int = 1024, seed: int = None) -> Dict[str, int]:
+    def execute(self, ir_module: QModule, shots: int = 1024, seed: Optional[int] = None) -> Dict[str, int]:
         """
         Compile and run the circuit on the detected simulator.
         Returns a dictionary of counts (e.g., {'00': 500, '11': 524}).

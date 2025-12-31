@@ -24,14 +24,16 @@ def test_evaluator_quantum_execution_mock():
     """
     program = parse(code)
     
-    with patch('hypercode.interpreter.evaluator.run_qiskit') as mock_run:
-        mock_run.return_value = {'0': 50, '1': 50}
+    with patch('hypercode.interpreter.evaluator.get_backend') as mock_get_backend:
+        mock_backend = MagicMock()
+        mock_backend.execute.return_value = {'0': 50, '1': 50}
+        mock_get_backend.return_value = mock_backend
         
         evaluator = Evaluator(use_quantum_sim=True)
         evaluator.evaluate(program)
         
-        # Check if run_qiskit was called
-        mock_run.assert_called_once()
+        # Check if backend.execute was called
+        mock_backend.execute.assert_called_once()
         
         # Check if results are in variables
         assert "Test_results" in evaluator.variables
