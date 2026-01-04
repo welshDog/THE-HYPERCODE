@@ -76,10 +76,12 @@ HyperFlow is the visual interface for **The HyperCode**, designed to be a **Neur
     *   `BioTypes.ts`: The taxonomy for DNA/RNA/Protein data contracts.
     *   `presets.ts`: Serialized scenes for instant context switching.
 *   **/src/storage**: Data persistence layer.
-    *   `MockCloudStorageProvider.ts`: Simulates cloud latency and sync states.
+    *   `SupabaseStorageProvider.ts`: Real-time cloud sync with Supabase.
+    *   `MockCloudStorageProvider.ts`: Simulates cloud latency and sync states (Fallback).
 
 ## 🧪 Documentation
 
+*   [**Supabase Setup**](SUPABASE_SETUP.md): Instructions for enabling real cloud sync.
 *   [**Design Notes**](docs/DESIGN_NOTES.md): Deep dive into the decision-making process, architecture, and "future-you" context.
 *   [**Demo Walkthrough**](docs/DEMO_WALKTHROUGH.md): A step-by-step script for demonstrating the Molecular Cloning workflow.
 *   [**Project Health Report**](PROJECT_HEALTH_REPORT.md): Current status and vitals of the codebase.

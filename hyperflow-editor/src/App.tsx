@@ -26,6 +26,8 @@ import { QUANTUM_PRESET, CENTRAL_DOGMA_PRESET, RESTRICTION_ENZYME_PRESET, ZEN_MO
 import CRISPRNode from './nodes/CRISPRNode';
 import type { SavedFlow } from './storage/StorageProvider';
 import { MockCloudStorageProvider } from './storage/MockCloudStorageProvider';
+import { supabase } from './lib/supabase';
+import { SupabaseStorageProvider } from './storage/SupabaseStorageProvider';
 
 // --- React Flow Types ---
 const nodeTypes: NodeTypes = {
@@ -58,7 +60,14 @@ function App() {
 
   // Cloud Sync State
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
-  const [storageProvider] = useState(() => new MockCloudStorageProvider());
+  const [storageProvider] = useState(() => {
+    if (supabase) {
+      console.log('Using Supabase Cloud Storage');
+      return new SupabaseStorageProvider(supabase);
+    }
+    console.log('Supabase credentials missing. Using Mock Storage.');
+    return new MockCloudStorageProvider();
+  });
 
   // Initial Load from Cloud
   useEffect(() => {
