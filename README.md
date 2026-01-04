@@ -179,9 +179,43 @@ Results (BellState): {'00': 502, '11': 498}
 ## What Works Today ✅
 
 - **Parser** — Custom recursive descent parser for HyperCode syntax.
+- **HyperFlow Editor** — React-based visual IDE with Bio-Logic and Focus Mode.
 - **Quantum Backend** — Execution via Qiskit (Aer Simulator priority).
 - **CLI** — `hypercode` command line interface for running and debugging.
 - **Repo structure** — `hypercode/`, `examples/`, `tests/` folders scaffolded.
+
+---
+
+## 🎨 HyperFlow: The Visual Cockpit
+
+> **"The cockpit for your neurodivergent brain."**
+
+HyperFlow is the visual IDE for HyperCode, designed to reduce cognitive load and prevent "wall-of-text" overwhelm. It is **not** just a prototype—it is a production-ready React Flow environment.
+
+### Core Features (v0.1.0)
+
+#### 🧬 Bio-Logic Engine (`VIS1`)
+- **Real Science**: Built-in `BioLogic.ts` engine handles DNA sticky ends, restriction sites, and ligation rules.
+- **Nodes**: `Sequence`, `Enzyme` (EcoRI, BamHI, etc.), `Ligase`.
+- **Validation**: Visual feedback prevents invalid biological connections.
+
+#### 👁️ Focus Mode (`VIS2`)
+- **Hyperfocus Toggle**: One click dims the entire world to 15% opacity, leaving only your active node and its neighbors.
+- **Semantic LOD**: Zoom out to see the "big picture" (blocks), zoom in to see the details (sequences/params).
+- **Benefit**: Eliminates visual noise and supports ADHD single-tasking.
+
+#### 🐍 Hybrid Export (`VIS3`)
+- **Code Generation**: Instantly converts your visual flow into executable Python code.
+- **Bio**: Generates `BioPython` scripts using `Bio.Restriction`.
+- **Quantum**: Generates `Qiskit` circuits for quantum nodes.
+
+### Try It Out
+Run the editor locally:
+```bash
+cd hyperflow-editor
+npm install
+npm run dev
+```
 
 ---
 
