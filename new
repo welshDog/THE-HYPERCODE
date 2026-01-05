@@ -1,0 +1,1552 @@
+Analysis errored
+Always show details
+import zipfile, os, re, json, textwrap, datetime, shutil, pathlib
+
+src_zip = "/mnt/data/hypercode-homepage-ready.zip"
+workdir = "/mnt/data/hypercode-homepage-upgrade"
+if os.path.exists(workdir):
+    shutil.rmtree(workdir)
+os.makedirs(workdir, exist_ok=True)
+
+with zipfile.ZipFile(src_zip, 'r') as z:
+    z.extractall(workdir)
+
+# find index.html
+index_path = None
+for root, dirs, files in os.walk(workdir):
+    for f in files:
+        if f.lower() == "index.html":
+            index_path = os.path.join(root, f)
+            break
+    if index_path:
+        break
+
+index_path
+
+Analyzed
+Always show details
+import zipfile, os, re, shutil
+
+src_zip = "/mnt/data/hypercode-homepage-ready.zip"
+workdir = "/mnt/data/hypercode-homepage-upgrade"
+
+if os.path.exists(workdir):
+    shutil.rmtree(workdir)
+os.makedirs(workdir, exist_ok=True)
+
+with zipfile.ZipFile(src_zip, "r") as z:
+    z.extractall(workdir)
+
+index_path = None
+for root, dirs, files in os.walk(workdir):
+    for f in files:
+        if f.lower() == "index.html":
+            index_path = os.path.join(root, f)
+            break
+    if index_path:
+        break
+
+index_path
+
+Result
+'/mnt/data/hypercode-homepage-upgrade/hypercode-homepage/index.html'
+Analyzed
+Always show details
+from pathlib import Path
+html = Path(index_path).read_text(encoding="utf-8")
+len(html), html[:500]
+
+Result
+(55735,
+ '<!doctype html>\n<html lang="en" data-theme="auto">\n<head>\n  <meta charset="utf-8" />\n  <meta name="viewport" content="width=device-width, initial-scale=1" />\n  <meta name="color-scheme" content="dark light" />\n  <meta name="theme-color" content="#0b0f1a" />\n  <title>HyperCode — Programming that thinks like your brain</title>\n  <meta name="description" content="HyperCode is an open-source programming language concept and toolchain built for neurodivergent-friendly workflows: clearer structure, le')
+Analyzed
+Always show details
+import re
+m = re.search(r"const\s+CONFIG\s*=\s*\{", html)
+m.start() if m else None
+
+Result
+49060
+Analyzed
+Always show details
+start = m.start()-200
+end = m.start()+1200
+print(html[start:end])
+
+STDOUT/STDERR
+=========================
+       CONFIG — edit these values and you’re done
+       (No build step. Keep it simple.)
+       ========================================================= -->
+  <script>
+    const CONFIG = {
+      site: {
+        name: "HyperCode",
+        url: "https://hypercode.dev/",
+        ogImage: "https://hypercode.dev/og.png",
+        license: "MIT"
+      },
+      links: {
+        githubRepo: "https://github.com/welshDog/THE-HYPERCODE",
+        githubIssues: "https://github.com/welshDog/THE-HYPERCODE/issues",
+        discord: "https://discord.gg/ME2qkNy79k",
+        docs: "https://github.com/welshDog/THE-HYPERCODE",
+        research: "https://github.com/welshDog/THE-HYPERCODE"
+      },
+      // Optional. Leave null to display "—"
+      stats: {
+        contributors: null,
+        stars: null,
+        members: null,
+        issues: null
+      },
+      // Theme toggle cycles: auto -> dark -> light
+      themeCycle: ["auto", "dark", "light"]
+    };
+  </script>
+
+  <script>
+    (function(){
+      // Year
+      document.getElementById("year").textContent = String(new Date().getFullYear());
+
+      // Apply links
+      const L = CONFIG.links;
+      const setHref = (id, href) => {
+        const el = document.getElementById(id);
+        if (el && href) el.setAttribute("href", href);
+      };
+      setHref("btnGitHub", L.githubRepo);
+      setHref("btnGitHub2", L.githubRe
+
+Analyzed
+Always show details
+# extract full CONFIG object block
+cfg_block = re.search(r"const\s+CONFIG\s*=\s*\{[\s\S]*?\n\s*\};", html)
+cfg_block.group(0)[:1200]
+
+Result
+'const CONFIG = {\n      site: {\n        name: "HyperCode",\n        url: "https://hypercode.dev/",\n        ogImage: "https://hypercode.dev/og.png",\n        license: "MIT"\n      },\n      links: {\n        githubRepo: "https://github.com/welshDog/THE-HYPERCODE",\n        githubIssues: "https://github.com/welshDog/THE-HYPERCODE/issues",\n        discord: "https://discord.gg/ME2qkNy79k",\n        docs: "https://github.com/welshDog/THE-HYPERCODE",\n        research: "https://github.com/welshDog/THE-HYPERCODE"\n      },\n      // Optional. Leave null to display "—"\n      stats: {\n        contributors: null,\n        stars: null,\n        members: null,\n        issues: null\n      },\n      // Theme toggle cycles: auto -> dark -> light\n      themeCycle: ["auto", "dark", "light"]\n    };'
+Analyzed
+Always show details
+print(cfg_block.group(0))
+
+STDOUT/STDERR
+const CONFIG = {
+      site: {
+        name: "HyperCode",
+        url: "https://hypercode.dev/",
+        ogImage: "https://hypercode.dev/og.png",
+        license: "MIT"
+      },
+      links: {
+        githubRepo: "https://github.com/welshDog/THE-HYPERCODE",
+        githubIssues: "https://github.com/welshDog/THE-HYPERCODE/issues",
+        discord: "https://discord.gg/ME2qkNy79k",
+        docs: "https://github.com/welshDog/THE-HYPERCODE",
+        research: "https://github.com/welshDog/THE-HYPERCODE"
+      },
+      // Optional. Leave null to display "—"
+      stats: {
+        contributors: null,
+        stars: null,
+        members: null,
+        issues: null
+      },
+      // Theme toggle cycles: auto -> dark -> light
+      themeCycle: ["auto", "dark", "light"]
+    };
+
+Analyzed
+Always show details
+import re
+re.findall(r"api\.github\.com[^\s\"']*", html)[:10], "api.github.com" in html
+
+Result
+([], False)
+Analyzed
+Always show details
+# search for ids in html for stats
+for pat in ["stars", "contributors", "issues", "members", "stat", "data-stat", "id=\"stars\"", "id=\"contributors\""]:
+    print(pat, len(re.findall(pat, html)))
+
+STDOUT/STDERR
+stars 3
+contributors 3
+issues 8
+members 3
+stat 15
+data-stat 6
+id="stars" 0
+id="contributors" 0
+
+Thought for 50s
+Analyzed
+Always show details
+m2 = re.search(r'data-stat="stars"[\s\S]{0,300}', html)
+print(m2.group(0) if m2 else "no")
+
+STDOUT/STDERR
+data-stat="stars">—</span></h3>
+            <p>GitHub stars (optional)</p>
+          </div>
+          <div class="card" style="grid-column: span 3">
+            <span class="chip">💬 People</span>
+            <h3 style="margin:10px 0 4px"><span data-stat="members">—</span></h3>
+            <p>Discord members (optiona
+
+Analyzed
+Always show details
+# locate JS that sets stats
+js_stats = re.search(r"//\s*Stats[\s\S]*?data-stat[\s\S]*?\}\)\(\);", html)
+js_stats.group(0)[:1200] if js_stats else "no js block found"
+
+Result
+'// Stats\n      document.querySelectorAll("[data-stat]").forEach(el => {\n        const key = el.getAttribute("data-stat");\n        const val = CONFIG.stats && Object.prototype.hasOwnProperty.call(CONFIG.stats, key) ? CONFIG.stats[key] : null;\n        el.textContent = (val === null || val === undefined || val === "") ? "—" : String(val);\n      });\n\n      // Theme toggle (no storage by design)\n      const root = document.documentElement;\n      const label = document.getElementById("themeLabel");\n      const btn = document.getElementById("themeBtn");\n\n      // Expose a derived scheme label to allow minor styling differences\n      const syncSchemeAttr = () => {\n        const theme = root.getAttribute("data-theme") || "auto";\n        let scheme = theme;\n        if (theme === "auto"){\n          scheme = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";\n        }\n        root.setAttribute("data-scheme", scheme);\n      };\n\n      const updateThemeLabel = () => {\n        const t = root.getAttribute("data-theme") || "auto";\n        if (label) label.textContent = t.charAt(0).toUpperCase() + t.slice(1);\n        syncSchemeAttr();\n      };\n\n      i'
+Analyzed
+Always show details
+print(js_stats.group(0))
+
+STDOUT/STDERR
+// Stats
+      document.querySelectorAll("[data-stat]").forEach(el => {
+        const key = el.getAttribute("data-stat");
+        const val = CONFIG.stats && Object.prototype.hasOwnProperty.call(CONFIG.stats, key) ? CONFIG.stats[key] : null;
+        el.textContent = (val === null || val === undefined || val === "") ? "—" : String(val);
+      });
+
+      // Theme toggle (no storage by design)
+      const root = document.documentElement;
+      const label = document.getElementById("themeLabel");
+      const btn = document.getElementById("themeBtn");
+
+      // Expose a derived scheme label to allow minor styling differences
+      const syncSchemeAttr = () => {
+        const theme = root.getAttribute("data-theme") || "auto";
+        let scheme = theme;
+        if (theme === "auto"){
+          scheme = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+        }
+        root.setAttribute("data-scheme", scheme);
+      };
+
+      const updateThemeLabel = () => {
+        const t = root.getAttribute("data-theme") || "auto";
+        if (label) label.textContent = t.charAt(0).toUpperCase() + t.slice(1);
+        syncSchemeAttr();
+      };
+
+      if (btn){
+        btn.addEventListener("click", () => {
+          const current = root.getAttribute("data-theme") || "auto";
+          const cycle = CONFIG.themeCycle || ["auto","dark","light"];
+          const idx = Math.max(0, cycle.indexOf(current));
+          const next = cycle[(idx + 1) % cycle.length];
+          root.setAttribute("data-theme", next);
+          updateThemeLabel();
+        });
+      }
+
+      // Update on system theme changes when in auto mode
+      try{
+        const mq = window.matchMedia("(prefers-color-scheme: light)");
+        mq.addEventListener("change", () => {
+          if ((root.getAttribute("data-theme") || "auto") === "auto") updateThemeLabel();
+        });
+      }catch(e){}
+
+      updateThemeLabel();
+
+      // JSON-LD: keep it correct and non-inflated (no made-up stats)
+      const schema = [
+        {
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          "name": CONFIG.site.name,
+          "url": CONFIG.site.url
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "name": CONFIG.site.name,
+          "url": CONFIG.site.url,
+          "sameAs": [CONFIG.links.githubRepo, CONFIG.links.discord].filter(Boolean)
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": CONFIG.site.name,
+          "applicationCategory": "DeveloperApplication",
+          "operatingSystem": "Cross-platform",
+          "license": CONFIG.site.license,
+          "url": CONFIG.site.url,
+          "codeRepository": CONFIG.links.githubRepo
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is HyperCode finished?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "HyperCode is an evolving open-source project. The goal is to ship useful parts early (docs, examples, tooling) and iterate with community feedback."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Do I have to be neurodivergent to use it?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. It’s designed with neurodivergent needs in mind, but the benefits (clarity, structure, flow) can help anyone."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What can I contribute right now?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Docs fixes, examples, issue triage, tests, and small PRs. If you can explain something clearly, you’re valuable here."
+              }
+            }
+          ]
+        }
+      ];
+
+      const ld = document.createElement("script");
+      ld.type = "application/ld+json";
+      ld.text = JSON.stringify(schema);
+      document.head.appendChild(ld);
+
+      // Update meta tags / canonical quickly from CONFIG
+      const setMeta = (selector, value) => {
+        const el = document.querySelector(selector);
+        if (el && value) el.setAttribute("content", value);
+      };
+      const setLink = (rel, href) => {
+        const el = document.querySelector(`link[rel="${rel}"]`);
+        if (el && href) el.setAttribute("href", href);
+      };
+
+      document.title = `${CONFIG.site.name} — Programming that thinks like your brain`;
+      setLink("canonical", CONFIG.site.url);
+      setMeta('meta[property="og:url"]', CONFIG.site.url);
+      setMeta('meta[property="og:image"]', CONFIG.site.ogImage);
+      setMeta('meta[name="twitter:image"]', CONFIG.site.ogImage);
+      setMeta('meta[property="og:title"]', document.title);
+      setMeta('meta[name="twitter:title"]', document.title);
+    })();
+
+Analyzed
+Always show details
+hero_idx = html.find("<!-- HERO")
+hero_idx
+
+Result
+16735
+Analyzed
+Always show details
+print(html[hero_idx:hero_idx+1500])
+
+STDOUT/STDERR
+<!-- HERO -->
+    <div id="top" class="hero">
+      <div class="wrap">
+        <div class="hero-grid">
+          <div>
+            <div class="badge-row">
+              <span class="badge"><span class="dot" aria-hidden="true"></span> Open-source • community-led</span>
+              <span class="badge"><span class="dot" aria-hidden="true" style="background:linear-gradient(135deg,var(--brand1),var(--brand3));box-shadow:0 0 0 3px rgba(139,92,246,.18)"></span> Neurodivergent-first UX</span>
+              <span class="badge"><span class="dot" aria-hidden="true" style="background:linear-gradient(135deg,var(--brand3),var(--brand2));box-shadow:0 0 0 3px rgba(6,182,212,.18)"></span> AI-native collaboration</span>
+            </div>
+
+            <h1>Programming that <span class="gradient">thinks like your brain</span>.</h1>
+            <p class="lede">
+              HyperCode is building a language + toolchain that reduces noise, supports clearer structure,
+              and makes collaboration with AI assistants feel natural — especially for brains that don’t fit the “standard developer mold”.
+            </p>
+
+            <div class="cta-row" role="group" aria-label="Primary calls to action">
+              <a class="btn primary" id="btnGitHub" href="https://github.com/welshDog/THE-HYPERCODE" target="_blank" rel="noreferrer">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M9 19c-4 1.5-4-2.5-5-3m10 6v-3.8c0-1.1.4-2.1 1.1
+
+Analyzed
+Always show details
+# Find the next section comment after hero
+after_hero = html.find("<!--", hero_idx+1)
+# this returns hero itself; need find subsequent comment after hero block
+pos = hero_idx+1
+comments=[]
+while True:
+    pos = html.find("<!--", pos)
+    if pos==-1: break
+    end = html.find("-->", pos)
+    if end==-1: break
+    comment = html[pos:end+3]
+    comments.append((pos, comment))
+    pos = end+3
+    if len(comments)>10: break
+comments[:10]
+
+Result
+[(21952, '<!-- WHY -->'),
+ (26865, '<!-- FEATURES -->'),
+ (30783, '<!-- HYPERFOCUS ZONE -->'),
+ (34512, '<!-- COMMUNITY -->'),
+ (37090, '<!-- GET INVOLVED -->'),
+ (40597, '<!-- RESEARCH -->'),
+ (44077, '<!-- FAQ -->'),
+ (46139, '<!-- FINAL CTA -->'),
+ (48823,
+  '<!-- =========================================================\n       CONFIG — edit these values and you’re done\n       (No build step. Keep it simple.)\n       ========================================================= -->')]
+Analyzed
+Always show details
+footer_idx = html.lower().find("<footer")
+footer_idx
+
+Result
+36349
+Analyzed
+Always show details
+print(html[footer_idx:footer_idx+1500])
+
+STDOUT/STDERR
+<footer>— Community tester (placeholder)</footer>
+          </blockquote>
+          <blockquote class="quote">
+            <p>“The focus-first angle is rare. If you nail the tooling, this is huge.”</p>
+            <footer>— Full‑stack dev (placeholder)</footer>
+          </blockquote>
+          <blockquote class="quote">
+            <p>“Readable structure + AI help = the combo I’ve wanted for years.”</p>
+            <footer>— Dyslexic coder (placeholder)</footer>
+          </blockquote>
+          <blockquote class="quote">
+            <p>“Open source, weird genius energy, and a real mission… I’m in.”</p>
+            <footer>— Contributor (placeholder)</footer>
+          </blockquote>
+        </div>
+      </div>
+    </section>
+
+    <!-- GET INVOLVED -->
+    <section id="get-involved">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <h2>Join the movement — 4 ways to get involved</h2>
+            <p class="kicker">Pick the path that matches your energy. You can switch any time.</p>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <span class="chip">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 19V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13" stroke="currentColor" stroke-width="2"/><path d="M8 9h8M8 13h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              Learn
+            </span>
+            <h3>Start simple</h3>
+            <p>
+
+Analyzed
+Always show details
+import re
+footers = [m.start() for m in re.finditer(r"<footer", html, flags=re.I)]
+len(footers), footers[:5], footers[-3:]
+
+Result
+(5, [36349, 36563, 36769, 36973, 47113], [36769, 36973, 47113])
+Analyzed
+Always show details
+print(html[46950:49500])
+
+STDOUT/STDERR
+rget="_blank" rel="noreferrer">Star on GitHub</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div class="foot">
+        <div>
+          <div class="brand" style="margin-bottom:10px">
+            <span class="logo" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 2l8 4.5v11L12 22l-8-4.5v-11L12 2Z" stroke="currentColor" stroke-width="2"/>
+                <path d="M8.2 10.2 12 12.3l3.8-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M12 12.5v6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span>HyperCode</span>
+          </div>
+          <p class="small" style="max-width: 70ch">
+            Open-source language + tooling experiments for neurodivergent-friendly coding and AI-native collaboration.
+          </p>
+          <p class="small">© <span id="year">2025</span> HyperCode community • Licensed under MIT (update if different).</p>
+        </div>
+
+        <div>
+          <h3>Quick links</h3>
+          <a href="#why">Vision</a>
+          <a href="#features">Features</a>
+          <a href="#get-involved">Contribute</a>
+          <a href="#research">Research</a>
+          <a href="#faq">FAQ</a>
+        </div>
+
+        <div>
+          <h3>Resources</h3>
+          <a id="footGitHub" href="https://github.com/welshDog/THE-HYPERCODE" target="_blank" rel="noreferrer">GitHub repo</a>
+          <a id="footIssues" href="https://github.com/welshDog/THE-HYPERCODE/issues" target="_blank" rel="noreferrer">Open issues</a>
+          <a id="footDiscord" href="https://discord.gg/ME2qkNy79k" target="_blank" rel="noreferrer">Discord</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- =========================================================
+       CONFIG — edit these values and you’re done
+       (No build step. Keep it simple.)
+       ========================================================= -->
+  <script>
+    const CONFIG = {
+      site: {
+        name: "HyperCode",
+        url: "https://hypercode.dev/",
+        ogImage: "https://hypercode.dev/og.png",
+        license: "MIT"
+      },
+      links: {
+        githubRepo: "https://github.com/welshDog/THE-HYPERCODE",
+        githubIssues: "https://github.com/welshDog/THE-HYPERCODE/issues",
+        discord: "https://discord.gg/ME2qkNy79k",
+        docs: "https://github.com/welshDog/THE-HYPERCODE",
+
+Analyzed
+Always show details
+style_idx = html.lower().find("<style")
+style_end_idx = html.lower().find("</style>", style_idx)
+style_idx, style_end_idx
+
+Result
+(1370, 14544)
+Analyzed
+Always show details
+nav_idx = html.lower().find("<nav")
+print(html[nav_idx:nav_idx+800])
+
+STDOUT/STDERR
+<nav class="navlinks" aria-label="Site">
+          <a href="#why">Why</a>
+          <a href="#features">Features</a>
+          <a href="#zone">Hyperfocus Zone</a>
+          <a href="#community">Community</a>
+          <a href="#research">Research</a>
+          <a href="#faq">FAQ</a>
+        </nav>
+
+        <div class="actions">
+          <button class="btn ghost" id="themeBtn" type="button" aria-label="Toggle theme">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z" stroke="currentColor" stroke-width="2"/>
+              <path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.4 1.4M17.6 17.6 19 19M19 5l-1.4 1.4M5 19l1.4-1.4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+
+
+Thought for 2m 24s
+Analyzed
+Always show details
+# extract footer block
+import re
+footer_block = re.search(r"<footer>\s*<div class=\"wrap\">[\s\S]*?</footer>", html)
+print(footer_block.group(0)[:1800])
+
+STDOUT/STDERR
+<footer>
+    <div class="wrap">
+      <div class="foot">
+        <div>
+          <div class="brand" style="margin-bottom:10px">
+            <span class="logo" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 2l8 4.5v11L12 22l-8-4.5v-11L12 2Z" stroke="currentColor" stroke-width="2"/>
+                <path d="M8.2 10.2 12 12.3l3.8-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M12 12.5v6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span>HyperCode</span>
+          </div>
+          <p class="small" style="max-width: 70ch">
+            Open-source language + tooling experiments for neurodivergent-friendly coding and AI-native collaboration.
+          </p>
+          <p class="small">© <span id="year">2025</span> HyperCode community • Licensed under MIT (update if different).</p>
+        </div>
+
+        <div>
+          <h3>Quick links</h3>
+          <a href="#why">Vision</a>
+          <a href="#features">Features</a>
+          <a href="#get-involved">Contribute</a>
+          <a href="#research">Research</a>
+          <a href="#faq">FAQ</a>
+        </div>
+
+        <div>
+          <h3>Resources</h3>
+          <a id="footGitHub" href="https://github.com/welshDog/THE-HYPERCODE" target="_blank" rel="noreferrer">GitHub repo</a>
+          <a id="footIssues" href="https://github.com/welshDog/THE-HYPERCODE/issues" target="_blank" rel="noreferrer">Open issues</a>
+          <a id="footDiscord" href="https://discord.gg/ME2qkNy79k" target="_blank" rel="noreferrer">Discord</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+Analyzed
+Always show details
+for id_ in ["footGitHub","footIssues","footDiscord","btnGitHub","btnDiscord","btnDocs"]:
+    print(id_, id_ in html)
+
+STDOUT/STDERR
+footGitHub True
+footIssues True
+footDiscord True
+btnGitHub True
+btnDiscord True
+btnDocs True
+
+Analyzed
+Always show details
+apply_links_block = re.search(r"// Apply links[\s\S]*?// Stats", html)
+print(apply_links_block.group(0)[:1800])
+
+STDOUT/STDERR
+// Apply links
+      const L = CONFIG.links;
+      const setHref = (id, href) => {
+        const el = document.getElementById(id);
+        if (el && href) el.setAttribute("href", href);
+      };
+      setHref("btnGitHub", L.githubRepo);
+      setHref("btnGitHub2", L.githubRepo);
+      setHref("btnIssues", L.githubIssues);
+      setHref("btnDocs", L.docs);
+      setHref("btnResearch", L.research);
+      setHref("footGitHub", L.githubRepo);
+      setHref("footIssues", L.githubIssues);
+      setHref("btnDiscord", L.discord);
+      setHref("btnDiscord2", L.discord);
+      setHref("btnDiscord3", L.discord);
+      setHref("footDiscord", L.discord);
+
+      // Stats
+
+Thought for 24s
+Analyzed
+Always show details
+# extract existing CSS for .foot
+css = html[style_idx:style_end_idx]
+m = re.search(r"\.foot[\s\S]*?\}", css)
+print(m.group(0)[:800])
+
+STDOUT/STDERR
+.foot{
+      display:grid; gap: var(--grid-gap);
+      grid-template-columns: 1.4fr 1fr 1fr;
+      align-items: start;
+    }
+
+Analyzed
+Always show details
+# find media query containing .foot
+import re
+media_blocks = re.findall(r"@media[^{]+\{[\s\S]*?\}", css)
+# filter those containing .foot
+foot_media = [b for b in media_blocks if ".foot" in b]
+len(foot_media), foot_media[:1]
+
+Result
+(1, ['@media (max-width: 920px){ .foot{ grid-template-columns: 1fr; }'])
+Thought for 23s
+Analyzed
+Always show details
+import re
+desc_match = re.search(r'<meta name="description" content="([^"]*)"', html)
+desc_match.group(1) if desc_match else None
+
+Result
+'HyperCode is an open-source programming language concept and toolchain built for neurodivergent-friendly workflows: clearer structure, less noise, and AI-native collaboration.'
+Thought for a couple of seconds
+Analysis errored
+Always show details
+from pathlib import Path
+import re, textwrap
+
+html = Path(index_path).read_text(encoding="utf-8")
+
+# 1) Update CONFIG block
+new_config = """const CONFIG = {
+      site: {
+        name: "HyperCode",
+        url: "https://welshDog.github.io/THE-HYPERCODE",
+        description: "A neurodivergent-first programming language with textual + visual syntax, targeting classical, quantum, and molecular computing.",
+        ogImage: "https://welshDog.github.io/THE-HYPERCODE/og.png",
+        license: "See LICENSE"
+      },
+      links: {
+        githubRepo: "https://github.com/welshDog/THE-HYPERCODE",
+        githubIssues: "https://github.com/welshDog/THE-HYPERCODE/issues",
+        githubDiscussions: "https://github.com/welshDog/THE-HYPERCODE/discussions",
+        discord: "https://discord.gg/ME2qkNy79k",
+        docs: "https://github.com/welshDog/THE-HYPERCODE#readme",
+        research: "https://github.com/welshDog/THE-HYPERCODE/tree/main/docs",
+        examples: "https://github.com/welshDog/THE-HYPERCODE/tree/main/examples"
+      },
+      repo: { owner: "welshDog", name: "THE-HYPERCODE" },
+      // Optional. Leave null to display "—" (or let GitHub auto-fill below).
+      stats: {
+        contributors: null,
+        stars: null,
+        members: null,
+        issues: null
+      },
+      // Theme toggle cycles: auto -> dark -> light
+      themeCycle: ["auto", "dark", "light"]
+    };"""
+
+html2 = re.sub(r"const\s+CONFIG\s*=\s*\{[\s\S]*?\n\s*\};", new_config, html, count=1)
+
+# 2) Add nav link
+html2 = html2.replace(
+    '<nav class="navlinks" aria-label="Site">\n          <a href="#why">Why</a>',
+    '<nav class="navlinks" aria-label="Site">\n          <a href="#why">Why</a>\n          <a href="#getting-started">Get Started</a>',
+    1
+)
+
+# 3) Insert Getting Started section before <!-- WHY -->
+insert_point = html2.find("<!-- WHY -->")
+getting_started_section = """
+    <!-- GETTING STARTED -->
+    <section id="getting-started">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <h2>Get started <span class="muted">(Dev Preview)</span></h2>
+            <p class="kicker">Clone it, install it editable, then run a real example from the repo.</p>
+          </div>
+          <div class="section-actions">
+            <a class="btn ghost" id="btnExamples" href="https://github.com/welshDog/THE-HYPERCODE/tree/main/examples" target="_blank" rel="noreferrer">
+              View examples
+            </a>
+          </div>
+        </div>
+
+        <div class="grid gs-grid">
+          <div class="card" style="grid-column: span 4">
+            <span class="chip">1️⃣ Install</span>
+            <div class="code-block" aria-label="Install commands">
+<pre><code class="language-bash">git clone https://github.com/welshDog/THE-HYPERCODE
+cd THE-HYPERCODE
+python -m pip install -e .</code></pre>
+            </div>
+            <p class="small muted">Editable install = you can hack on the language and tools immediately.</p>
+          </div>
+
+          <div class="card" style="grid-column: span 4">
+            <span class="chip">2️⃣ Sanity check</span>
+            <div class="code-block" aria-label="CLI help">
+<pre><code class="language-bash">hypercode --help</code></pre>
+            </div>
+            <p class="small muted">The CLI is stubbed and ready — the parser + backends are the next milestones.</p>
+          </div>
+
+          <div class="card" style="grid-column: span 4">
+            <span class="chip">3️⃣ Run an example</span>
+            <div class="code-block" aria-label="Run an example">
+<pre><code class="language-bash">hypercode run examples/bell_pair.hc --backend qiskit</code></pre>
+            </div>
+            <p class="small muted">This is the repo’s current “north star” flow. Expect the syntax + toolchain to evolve.</p>
+          </div>
+
+          <div class="card" style="grid-column: span 12">
+            <span class="chip">📄 Example snippet (Quantum)</span>
+            <div class="code-block" aria-label="Example HyperCode snippet">
+<pre><code class="language-none">#:domain quantum
+#:backend qiskit
+
+@quantum_function: bell_pair () -> Bits
+  @doc: "Create a Bell pair (maximally entangled state)"
+
+  @circuit: c
+    @init: qubits = QuantumRegister(2)
+    @hadamard: qubits[0]
+    @cnot: control=qubits[0], target=qubits[1]
+    @measure: qubits -> result
+
+  @return: result</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="note">
+          <strong>Heads up:</strong> HyperCode is in active build mode. If you want “good first issues”, check the repo’s ROADMAP and the Issues tab.
+        </div>
+      </div>
+    </section>
+
+"""
+if insert_point != -1:
+    html2 = html2[:insert_point] + getting_started_section + html2[insert_point:]
+
+# 4) Update footer markup (keep key IDs used by JS)
+footer_re = re.compile(r"<footer>\s*<div class=\"wrap\">[\s\S]*?</footer>", re.M)
+new_footer = """
+  <footer>
+    <div class="wrap">
+      <div class="foot">
+        <div>
+          <div class="brand" style="margin-bottom:10px">
+            <span class="logo" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 2l8 4.5v11L12 22l-8-4.5v-11L12 2Z" stroke="currentColor" stroke-width="2"/>
+                <path d="M8.2 10.2 12 12.3l3.8-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M12 12.5v6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span>HyperCode</span>
+          </div>
+          <p class="small" style="max-width: 60ch; opacity:.85; margin: 0;">
+            A neurodivergent-first programming language + toolchain. Textual + visual syntax. Classical, quantum, and molecular targets.
+          </p>
+          <div style="margin-top: 14px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <a id="footGitHub" class="btn ghost" href="https://github.com/welshDog/THE-HYPERCODE" target="_blank" rel="noreferrer">GitHub</a>
+            <a id="footDiscord" class="btn ghost" href="https://discord.gg/ME2qkNy79k" target="_blank" rel="noreferrer">Discord</a>
+            <a id="footIssues" class="btn ghost" href="https://github.com/welshDog/THE-HYPERCODE/issues" target="_blank" rel="noreferrer">Issues</a>
+          </div>
+        </div>
+
+        <div>
+          <h3>Resources</h3>
+          <a id="footDocs" href="https://github.com/welshDog/THE-HYPERCODE#readme" target="_blank" rel="noreferrer">Documentation</a>
+          <a id="footExamples" href="https://github.com/welshDog/THE-HYPERCODE/tree/main/examples" target="_blank" rel="noreferrer">Examples</a>
+          <a id="footResearch" href="https://github.com/welshDog/THE-HYPERCODE/tree/main/docs" target="_blank" rel="noreferrer">Research docs</a>
+          <a id="footDiscussions" href="https://github.com/welshDog/THE-HYPERCODE/discussions" target="_blank" rel="noreferrer">Discussions</a>
+        </div>
+
+        <div>
+          <h3>Project</h3>
+          <a href="https://github.com/welshDog/THE-HYPERCODE/blob/main/ROADMAP.md" target="_blank" rel="noreferrer">Roadmap</a>
+          <a href="https://github.com/welshDog/THE-HYPERCODE/blob/main/DEVELOPMENT.md" target="_blank" rel="noreferrer">Development</a>
+          <a href="https://github.com/welshDog/THE-HYPERCODE/blob/main/LICENSE" target="_blank" rel="noreferrer">License</a>
+          <a href="https://github.com/welshDog/THE-HYPERCODE/blob/main/CONTRIBUTING.md" target="_blank" rel="noreferrer">Contributing</a>
+        </div>
+
+        <div>
+          <h3>Navigate</h3>
+          <a href="#top">Top</a>
+          <a href="#getting-started">Get started</a>
+          <a href="#features">Features</a>
+          <a href="#get-involved">Contribute</a>
+          <a href="#faq">FAQ</a>
+        </div>
+      </div>
+
+      <div class="small" style="margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--border); opacity:.75;">
+        <div style="display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+          <span>© <span id="year">2025</span> HyperCode Project</span>
+          <span>License: <a href="https://github.com/welshDog/THE-HYPERCODE/blob/main/LICENSE" target="_blank" rel="noreferrer">See LICENSE</a></span>
+        </div>
+      </div>
+    </div>
+  </footer>
+"""
+html2 = footer_re.sub(new_footer, html2, count=1)
+
+# 5) Add CSS: code blocks + note + footer grid 4 cols + responsive for getting started
+style_match = re.search(r"<style>[\s\S]*?</style>", html2)
+if style_match:
+    style_block = style_match.group(0)
+    # update .foot column count
+    style_block2 = re.sub(r"\.foot\{\s*display:grid;[^}]*grid-template-columns:\s*1\.4fr\s+1fr\s+1fr;", 
+                          ".foot{\n      display:grid; gap: var(--grid-gap);\n      grid-template-columns: 1.4fr 1fr 1fr 1fr;",
+                          style_block)
+    extra_css = """
+    /* --- Getting Started code blocks --- */
+    .code-block{
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.1em;
+      overflow-x: auto;
+      font-family: var(--mono);
+      font-size: 0.92em;
+      line-height: 1.6;
+    }
+    .code-block pre{ margin:0; }
+    .code-block code{ font-family: var(--mono); background: none; padding: 0; }
+
+    .note{
+      margin-top: 18px;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.02);
+      border-radius: 14px;
+    }
+
+    /* Getting Started layout */
+    .gs-grid{ margin-top: 18px; }
+    @media (max-width: 920px){
+      .gs-grid > .card[style*="grid-column: span 4"]{ grid-column: span 12 !important; }
+    }
+    """
+    # inject extra_css before </style> if not already present
+    if ".code-block" not in style_block2:
+        style_block2 = style_block2.replace("</style>", extra_css + "\n</style>")
+    html2 = html2.replace(style_block, style_block2, 1)
+
+# 6) Update JS apply links to include new IDs, and set meta description
+apply_links_block = re.search(r"// Apply links[\s\S]*?// Stats", html2)
+if apply_links_block:
+    block = apply_links_block.group(0)
+
+    # add new setHref lines if missing
+    additions = [
+        '      setHref("btnExamples", L.examples);\n',
+        '      setHref("footDocs", L.docs);\n',
+        '      setHref("footExamples", L.examples);\n',
+        '      setHref("footResearch", L.research);\n',
+        '      setHref("footDiscussions", L.githubDiscussions);\n',
+    ]
+    for add in additions:
+        if add.strip() not in block:
+            # insert before // Stats
+            block = block.replace("      // Stats", add + "      // Stats")
+    html2 = html2.replace(apply_links_block.group(0), block, 1)
+
+# inject GitHub auto-stats into same IIFE right after // Stats population (before Theme toggle)
+iife_stats_match = re.search(r"// Stats[\s\S]*?document\.querySelectorAll\(\"\\[data-stat\\]\"\)[\s\S]*?\);\n", html2)
+if iife_stats_match:
+    after_stats = iife_stats_match.group(0)
+    if "hydrateGitHubStats" not in html2:
+        gh_js = """
+      // Auto-fill GitHub stats (best-effort; falls back gracefully)
+      (function hydrateGitHubStats(){
+        try{
+          const repoUrl = (CONFIG.links && CONFIG.links.githubRepo) || "";
+          const m = repoUrl.match(/github\\.com\\/([^\\/]+)\\/([^\\/#?]+)/i);
+          const owner = (CONFIG.repo && CONFIG.repo.owner) || (m ? m[1] : null);
+          const repo  = (CONFIG.repo && CONFIG.repo.name)  || (m ? m[2].replace(/\\.git$/i,"") : null);
+          if(!owner || !repo) return;
+
+          const setStat = (key, val) => {
+            const el = document.querySelector(`[data-stat="${key}"]`);
+            if(el && val !== null && val !== undefined) el.textContent = String(val);
+          };
+
+          fetch(`https://api.github.com/repos/${owner}/${repo}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+              if(!data) return;
+              if (CONFIG.stats.stars == null) setStat("stars", data.stargazers_count);
+              if (CONFIG.stats.issues == null) setStat("issues", data.open_issues_count);
+            })
+            .catch(() => {});
+        }catch(e){ /* no-op */ }
+      })();
+"""
+        html2 = html2.replace(after_stats, after_stats + gh_js, 1)
+
+# set meta description from config (in the meta setting section near end of IIFE)
+if 'meta[name="description"]' not in html2:
+    pass
+# We'll add after canonical setLink call? We have setMeta helper already. Add one line setting description.
+meta_inject_pat = r'setLink\("canonical", CONFIG\.site\.url\);\n'
+if re.search(meta_inject_pat, html2) and 'meta[name="description"]' not in html2.split(meta_inject_pat)[1][:400]:
+    html2 = re.sub(meta_inject_pat, 'setLink("canonical", CONFIG.site.url);\n      setMeta(\'meta[name="description"]\', CONFIG.site.description);\n', html2, count=1)
+
+# update document.title to include config name only (keep as is) but fine.
+
+Path(index_path).write_text(html2, encoding="utf-8")
+len(html), len(html2)
+
+---------------------------------------------------------------------------
+IndexError                                Traceback (most recent call last)
+Cell In[27], line 283
+    281 # We'll add after canonical setLink call? We have setMeta helper already. Add one line setting description.
+    282 meta_inject_pat = r'setLink\("canonical", CONFIG\.site\.url\);\n'
+--> 283 if re.search(meta_inject_pat, html2) and 'meta[name="description"]' not in html2.split(meta_inject_pat)[1][:400]:
+    284     html2 = re.sub(meta_inject_pat, 'setLink("canonical", CONFIG.site.url);\n      setMeta(\'meta[name="description"]\', CONFIG.site.description);\n', html2, count=1)
+    286 # update document.title to include config name only (keep as is) but fine.
+
+IndexError: list index out of range
+
+Analyzed
+Always show details
+from pathlib import Path
+import re, textwrap, shutil, zipfile, os
+
+# Reload original HTML
+html = Path(index_path).read_text(encoding="utf-8")
+
+# 1) Update CONFIG
+new_config = """const CONFIG = {
+      site: {
+        name: "HyperCode",
+        url: "https://welshDog.github.io/THE-HYPERCODE",
+        description: "A neurodivergent-first programming language with textual + visual syntax, targeting classical, quantum, and molecular computing.",
+        ogImage: "https://welshDog.github.io/THE-HYPERCODE/og.png",
+        license: "See LICENSE"
+      },
+      links: {
+        githubRepo: "https://github.com/welshDog/THE-HYPERCODE",
+        githubIssues: "https://github.com/welshDog/THE-HYPERCODE/issues",
+        githubDiscussions: "https://github.com/welshDog/THE-HYPERCODE/discussions",
+        discord: "https://discord.gg/ME2qkNy79k",
+        docs: "https://github.com/welshDog/THE-HYPERCODE#readme",
+        research: "https://github.com/welshDog/THE-HYPERCODE/tree/main/docs",
+        examples: "https://github.com/welshDog/THE-HYPERCODE/tree/main/examples"
+      },
+      repo: { owner: "welshDog", name: "THE-HYPERCODE" },
+      // Optional. Leave null to display "—" (or let GitHub auto-fill below).
+      stats: {
+        contributors: null,
+        stars: null,
+        members: null,
+        issues: null
+      },
+      // Theme toggle cycles: auto -> dark -> light
+      themeCycle: ["auto", "dark", "light"]
+    };"""
+
+html2 = re.sub(r"const\s+CONFIG\s*=\s*\{[\s\S]*?\n\s*\};", new_config, html, count=1)
+
+# 2) Add nav link
+html2 = html2.replace(
+    '<nav class="navlinks" aria-label="Site">\n          <a href="#why">Why</a>',
+    '<nav class="navlinks" aria-label="Site">\n          <a href="#why">Why</a>\n          <a href="#getting-started">Get Started</a>',
+    1
+)
+
+# 3) Insert Getting Started before <!-- WHY -->
+insert_point = html2.find("<!-- WHY -->")
+getting_started_section = """
+    <!-- GETTING STARTED -->
+    <section id="getting-started">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <h2>Get started <span class="muted">(Dev Preview)</span></h2>
+            <p class="kicker">Clone it, install it editable, then run a real example from the repo.</p>
+          </div>
+          <div class="section-actions">
+            <a class="btn ghost" id="btnExamples" href="https://github.com/welshDog/THE-HYPERCODE/tree/main/examples" target="_blank" rel="noreferrer">
+              View examples
+            </a>
+          </div>
+        </div>
+
+        <div class="grid gs-grid">
+          <div class="card" style="grid-column: span 4">
+            <span class="chip">1️⃣ Install</span>
+            <div class="code-block" aria-label="Install commands">
+<pre><code class="language-bash">git clone https://github.com/welshDog/THE-HYPERCODE
+cd THE-HYPERCODE
+python -m pip install -e .</code></pre>
+            </div>
+            <p class="small muted">Editable install = you can hack on the language and tools immediately.</p>
+          </div>
+
+          <div class="card" style="grid-column: span 4">
+            <span class="chip">2️⃣ Sanity check</span>
+            <div class="code-block" aria-label="CLI help">
+<pre><code class="language-bash">hypercode --help</code></pre>
+            </div>
+            <p class="small muted">The CLI is stubbed and ready — parser + backends are the next milestones.</p>
+          </div>
+
+          <div class="card" style="grid-column: span 4">
+            <span class="chip">3️⃣ Run an example</span>
+            <div class="code-block" aria-label="Run an example">
+<pre><code class="language-bash">hypercode run examples/bell_pair.hc --backend qiskit</code></pre>
+            </div>
+            <p class="small muted">This is the current “north star” flow. Expect the syntax + toolchain to evolve.</p>
+          </div>
+
+          <div class="card" style="grid-column: span 12">
+            <span class="chip">📄 Example snippet (Quantum)</span>
+            <div class="code-block" aria-label="Example HyperCode snippet">
+<pre><code class="language-none">#:domain quantum
+#:backend qiskit
+
+@quantum_function: bell_pair () -> Bits
+  @doc: "Create a Bell pair (maximally entangled state)"
+
+  @circuit: c
+    @init: qubits = QuantumRegister(2)
+    @hadamard: qubits[0]
+    @cnot: control=qubits[0], target=qubits[1]
+    @measure: qubits -> result
+
+  @return: result</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="note">
+          <strong>Heads up:</strong> HyperCode is in active build mode. If you want “good first issues”, check the repo’s ROADMAP and the Issues tab.
+        </div>
+      </div>
+    </section>
+
+"""
+if insert_point != -1:
+    html2 = html2[:insert_point] + getting_started_section + html2[insert_point:]
+
+# 4) Replace site footer
+footer_re = re.compile(r"<footer>\s*<div class=\"wrap\">[\s\S]*?</footer>", re.M)
+new_footer = """
+  <footer>
+    <div class="wrap">
+      <div class="foot">
+        <div>
+          <div class="brand" style="margin-bottom:10px">
+            <span class="logo" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 2l8 4.5v11L12 22l-8-4.5v-11L12 2Z" stroke="currentColor" stroke-width="2"/>
+                <path d="M8.2 10.2 12 12.3l3.8-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M12 12.5v6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span>HyperCode</span>
+          </div>
+          <p class="small" style="max-width: 60ch; opacity:.85; margin: 0;">
+            A neurodivergent-first programming language + toolchain. Textual + visual syntax. Classical, quantum, and molecular targets.
+          </p>
+          <div style="margin-top: 14px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <a id="footGitHub" class="btn ghost" href="https://github.com/welshDog/THE-HYPERCODE" target="_blank" rel="noreferrer">GitHub</a>
+            <a id="footDiscord" class="btn ghost" href="https://discord.gg/ME2qkNy79k" target="_blank" rel="noreferrer">Discord</a>
+            <a id="footIssues" class="btn ghost" href="https://github.com/welshDog/THE-HYPERCODE/issues" target="_blank" rel="noreferrer">Issues</a>
+          </div>
+        </div>
+
+        <div>
+          <h3>Resources</h3>
+          <a id="footDocs" href="https://github.com/welshDog/THE-HYPERCODE#readme" target="_blank" rel="noreferrer">Documentation</a>
+          <a id="footExamples" href="https://github.com/welshDog/THE-HYPERCODE/tree/main/examples" target="_blank" rel="noreferrer">Examples</a>
+          <a id="footResearch" href="https://github.com/welshDog/THE-HYPERCODE/tree/main/docs" target="_blank" rel="noreferrer">Research docs</a>
+          <a id="footDiscussions" href="https://github.com/welshDog/THE-HYPERCODE/discussions" target="_blank" rel="noreferrer">Discussions</a>
+        </div>
+
+        <div>
+          <h3>Project</h3>
+          <a href="https://github.com/welshDog/THE-HYPERCODE/blob/main/ROADMAP.md" target="_blank" rel="noreferrer">Roadmap</a>
+          <a href="https://github.com/welshDog/THE-HYPERCODE/blob/main/DEVELOPMENT.md" target="_blank" rel="noreferrer">Development</a>
+          <a href="https://github.com/welshDog/THE-HYPERCODE/blob/main/LICENSE" target="_blank" rel="noreferrer">License</a>
+          <a href="https://github.com/welshDog/THE-HYPERCODE/blob/main/CONTRIBUTING.md" target="_blank" rel="noreferrer">Contributing</a>
+        </div>
+
+        <div>
+          <h3>Navigate</h3>
+          <a href="#top">Top</a>
+          <a href="#getting-started">Get started</a>
+          <a href="#features">Features</a>
+          <a href="#get-involved">Contribute</a>
+          <a href="#faq">FAQ</a>
+        </div>
+      </div>
+
+      <div class="small" style="margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--border); opacity:.75;">
+        <div style="display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+          <span>© <span id="year">2025</span> HyperCode Project</span>
+          <span>License: <a href="https://github.com/welshDog/THE-HYPERCODE/blob/main/LICENSE" target="_blank" rel="noreferrer">See LICENSE</a></span>
+        </div>
+      </div>
+    </div>
+  </footer>
+"""
+html2 = footer_re.sub(new_footer, html2, count=1)
+
+# 5) CSS additions + foot columns
+style_match = re.search(r"<style>[\s\S]*?</style>", html2)
+if style_match:
+    style_block = style_match.group(0)
+    # update .foot columns
+    style_block = re.sub(
+        r"\.foot\{\s*display:grid;\s*gap:\s*var\(--grid-gap\);\s*grid-template-columns:\s*1\.4fr\s+1fr\s+1fr;",
+        ".foot{\n      display:grid; gap: var(--grid-gap);\n      grid-template-columns: 1.4fr 1fr 1fr 1fr;",
+        style_block
+    )
+    extra_css = """
+    /* --- Getting Started code blocks --- */
+    .code-block{
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.1em;
+      overflow-x: auto;
+      font-family: var(--mono);
+      font-size: 0.92em;
+      line-height: 1.6;
+    }
+    .code-block pre{ margin:0; }
+    .code-block code{ font-family: var(--mono); background: none; padding: 0; }
+
+    .note{
+      margin-top: 18px;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.02);
+      border-radius: 14px;
+    }
+
+    .gs-grid{ margin-top: 18px; }
+    @media (max-width: 920px){
+      .gs-grid > .card[style*="grid-column: span 4"]{ grid-column: span 12 !important; }
+    }
+    """
+    if ".code-block" not in style_block:
+        style_block = style_block.replace("</style>", extra_css + "\n</style>")
+    html2 = html2.replace(style_match.group(0), style_block, 1)
+
+# 6) JS link wiring additions
+apply_links = re.search(r"// Apply links[\s\S]*?// Stats", html2)
+if apply_links:
+    block = apply_links.group(0)
+    extra_lines = [
+        '      setHref("btnExamples", L.examples);\n',
+        '      setHref("footDocs", L.docs);\n',
+        '      setHref("footExamples", L.examples);\n',
+        '      setHref("footResearch", L.research);\n',
+        '      setHref("footDiscussions", L.githubDiscussions);\n',
+    ]
+    for line in extra_lines:
+        if line.strip() not in block:
+            block = block.replace("      // Stats", line + "      // Stats")
+    html2 = html2.replace(apply_links.group(0), block, 1)
+
+# 7) Add GitHub auto-stats right after stats block
+stats_block = re.search(r"// Stats\n\s*document\.querySelectorAll\(\"\\[data-stat\\]\"\)\.forEach\([\s\S]*?\);\n", html2)
+if stats_block and "hydrateGitHubStats" not in html2:
+    gh_js = """
+      // Auto-fill GitHub stats (best-effort; falls back gracefully)
+      (function hydrateGitHubStats(){
+        try{
+          const repoUrl = (CONFIG.links && CONFIG.links.githubRepo) || "";
+          const m = repoUrl.match(/github\\.com\\/([^\\/]+)\\/([^\\/#?]+)/i);
+          const owner = (CONFIG.repo && CONFIG.repo.owner) || (m ? m[1] : null);
+          const repo  = (CONFIG.repo && CONFIG.repo.name)  || (m ? m[2].replace(/\\.git$/i,"") : null);
+          if(!owner || !repo) return;
+
+          const setStat = (key, val) => {
+            const el = document.querySelector(`[data-stat="${key}"]`);
+            if(el && val !== null && val !== undefined) el.textContent = String(val);
+          };
+
+          fetch(`https://api.github.com/repos/${owner}/${repo}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+              if(!data) return;
+              if (CONFIG.stats.stars == null) setStat("stars", data.stargazers_count);
+              if (CONFIG.stats.issues == null) setStat("issues", data.open_issues_count);
+            })
+            .catch(() => {});
+        }catch(e){ /* no-op */ }
+      })();
+"""
+    html2 = html2.replace(stats_block.group(0), stats_block.group(0) + gh_js, 1)
+
+# 8) Set meta description from CONFIG.site.description (using existing helper setMeta)
+if "meta[name=\"description\"]" in html2:
+    # inject once near canonical line if not already injected
+    if "CONFIG.site.description" not in html2:
+        pass
+
+# Find the canonical setter line and ensure we set description there
+canonical_line = '      setLink("canonical", CONFIG.site.url);\n'
+if canonical_line in html2 and "meta[name=\"description\"]" not in html2.split(canonical_line)[1][:200]:
+    html2 = html2.replace(canonical_line, canonical_line + "      setMeta('meta[name=\"description\"]', CONFIG.site.description);\n", 1)
+
+# Write back
+Path(index_path).write_text(html2, encoding="utf-8")
+
+len(html), len(html2)
+
+Result
+(55735, 61768)
+Analyzed
+Always show details
+import zipfile, os, shutil
+out_zip = "/mnt/data/hypercode-homepage-upgraded.zip"
+if os.path.exists(out_zip):
+    os.remove(out_zip)
+
+with zipfile.ZipFile(out_zip, "w", compression=zipfile.ZIP_DEFLATED) as z:
+    for root, dirs, files in os.walk(workdir):
+        for f in files:
+            fp = os.path.join(root, f)
+            arc = os.path.relpath(fp, workdir)
+            z.write(fp, arc)
+
+out_zip, os.path.getsize(out_zip)
+
+Result
+('/mnt/data/hypercode-homepage-upgraded.zip', 14869)
+Analyzed
+Always show details
+from pathlib import Path
+html_new = Path(index_path).read_text(encoding="utf-8")
+("id=\"getting-started\"" in html_new,
+ "Get started" in html_new,
+ "btnExamples" in html_new,
+ "footDocs" in html_new,
+ "hydrateGitHubStats" in html_new)
+
+Result
+(True, True, True, True, False)
+Analyzed
+Always show details
+import re
+m = re.search(r"// Stats[\s\S]*?document\.querySelectorAll\(\"\\[data-stat\\]\"\)[\s\S]*?\);\n", html_new)
+print(m.group(0)[:500] if m else "no match")
+
+STDOUT/STDERR
+no match
+
+Analyzed
+Always show details
+idx = html_new.find('document.querySelectorAll("[data-stat]")')
+idx
+
+Result
+56623
+Analyzed
+Always show details
+print(html_new[idx-120:idx+420])
+
+STDOUT/STDERR
+
+      setHref("footResearch", L.research);
+      setHref("footDiscussions", L.githubDiscussions);
+      // Stats
+      document.querySelectorAll("[data-stat]").forEach(el => {
+        const key = el.getAttribute("data-stat");
+        const val = CONFIG.stats && Object.prototype.hasOwnProperty.call(CONFIG.stats, key) ? CONFIG.stats[key] : null;
+        el.textContent = (val === null || val === undefined || val === "") ? "—" : String(val);
+      });
+
+      // Theme toggle (no storage by design)
+      const root = document.documentEleme
+
+Analyzed
+Always show details
+"meta[name=\"description\"]" in html_new, 'setMeta(\'meta[name="description"]\'' in html_new
+
+Result
+(True, True)
+Analyzed
+Always show details
+from pathlib import Path
+html_new = Path(index_path).read_text(encoding="utf-8")
+
+if "hydrateGitHubStats" not in html_new:
+    insertion = """
+      // Auto-fill GitHub stats (best-effort; falls back gracefully)
+      (function hydrateGitHubStats(){
+        try{
+          const repoUrl = (CONFIG.links && CONFIG.links.githubRepo) || "";
+          const m = repoUrl.match(/github\\.com\\/([^\\/]+)\\/([^\\/#?]+)/i);
+          const owner = (CONFIG.repo && CONFIG.repo.owner) || (m ? m[1] : null);
+          const repo  = (CONFIG.repo && CONFIG.repo.name)  || (m ? m[2].replace(/\\.git$/i,"") : null);
+          if(!owner || !repo) return;
+
+          const setStat = (key, val) => {
+            const el = document.querySelector(`[data-stat="${key}"]`);
+            if(el && val !== null && val !== undefined) el.textContent = String(val);
+          };
+
+          fetch(`https://api.github.com/repos/${owner}/${repo}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+              if(!data) return;
+              if (CONFIG.stats.stars == null) setStat("stars", data.stargazers_count);
+              if (CONFIG.stats.issues == null) setStat("issues", data.open_issues_count);
+            })
+            .catch(() => {});
+        }catch(e){ /* no-op */ }
+      })();
+"""
+    marker = '      document.querySelectorAll("[data-stat]").forEach(el => {\n'
+    # insert after the end of the forEach block (first occurrence)
+    end_pat = r'document\.querySelectorAll\("\[data-stat\]"\)\.forEach\(el => \{\n[\s\S]*?\n\s*\}\);\n'
+    match = re.search(end_pat, html_new)
+    if match:
+        html_new = html_new[:match.end()] + insertion + html_new[match.end():]
+    else:
+        # fallback: insert right after the forEach closing
+        close = html_new.find('      });\n\n      // Theme toggle', html_new.find(marker))
+        if close != -1:
+            html_new = html_new[:close+8] + insertion + html_new[close+8:]
+    Path(index_path).write_text(html_new, encoding="utf-8")
+
+"hydrateGitHubStats" in html_new
+
+Result
+True
+Analyzed
+Always show details
+import zipfile, os
+out_zip = "/mnt/data/hypercode-homepage-upgraded.zip"
+if os.path.exists(out_zip):
+    os.remove(out_zip)
+with zipfile.ZipFile(out_zip, "w", compression=zipfile.ZIP_DEFLATED) as z:
+    for root, dirs, files in os.walk(workdir):
+        for f in files:
+            fp = os.path.join(root, f)
+            z.write(fp, os.path.relpath(fp, workdir))
+
+os.path.getsize(out_zip)
+
+Result
+15269
+Thought for 2m 16s
+Analyzed
+Always show details
+import os
+index_dir = os.path.dirname(index_path)
+index_dir, os.listdir(index_dir)
+
+Result
+('/mnt/data/hypercode-homepage-upgrade/hypercode-homepage',
+ ['index.html', 'README.md'])
+Thought for a couple of seconds
+Analyzed
+Always show details
+from PIL import Image, ImageDraw, ImageFont
+import os, math
+
+og_path = os.path.join(index_dir, "og.png")
+
+W, H = 1200, 630
+img = Image.new("RGB", (W, H), (10, 12, 18))
+draw = ImageDraw.Draw(img)
+
+# gradient-ish bands
+for y in range(H):
+    t = y / (H-1)
+    r = int(10 + 20*t)
+    g = int(12 + 30*t)
+    b = int(18 + 60*t)
+    draw.line([(0,y),(W,y)], fill=(r,g,b))
+
+# accent glow circles
+for (cx, cy, rad, col) in [(250, 170, 260, (120, 80, 255)), (950, 520, 320, (0, 210, 255)), (980, 160, 220, (255, 140, 0))]:
+    for rr in range(rad, 0, -6):
+        alpha = int(255 * (1 - rr/rad) * 0.14)
+        if alpha <= 0: 
+            continue
+        overlay = Image.new("RGBA", (W, H), (0,0,0,0))
+        od = ImageDraw.Draw(overlay)
+        od.ellipse((cx-rr, cy-rr, cx+rr, cy+rr), fill=col + (alpha,))
+        img = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
+        draw = ImageDraw.Draw(img)
+
+# Load a default font
+try:
+    font_big = ImageFont.truetype("DejaVuSans.ttf", 88)
+    font_mid = ImageFont.truetype("DejaVuSans.ttf", 34)
+    font_small = ImageFont.truetype("DejaVuSans.ttf", 26)
+except:
+    font_big = ImageFont.load_default()
+    font_mid = ImageFont.load_default()
+    font_small = ImageFont.load_default()
+
+# Title and subtitle
+title = "HyperCode"
+subtitle = "Neurodivergent-first • Text + Visual • Classical + Quantum + Molecular"
+
+# measure & draw
+tw, th = draw.textbbox((0,0), title, font=font_big)[2:]
+draw.text((80, 210), title, font=font_big, fill=(245, 246, 255))
+draw.text((80, 320), subtitle, font=font_mid, fill=(210, 214, 230))
+
+# small footer
+draw.text((80, 500), "Open-source language + tooling experiments", font=font_small, fill=(190, 196, 220))
+
+# minimal hex logo
+hex_center = (1020, 270)
+size = 130
+points = []
+for i in range(6):
+    ang = math.radians(60*i - 30)
+    points.append((hex_center[0] + size*math.cos(ang), hex_center[1] + size*math.sin(ang)))
+draw.polygon(points, outline=(240, 240, 255), width=6)
+
+# inner lines
+draw.line([points[0], points[3]], fill=(240,240,255), width=4)
+draw.line([points[1], points[4]], fill=(240,240,255), width=4)
+
+img.save(og_path, "PNG")
+og_path
+
+Result
+'/mnt/data/hypercode-homepage-upgrade/hypercode-homepage/og.png'
+Analyzed
+Always show details
+from pathlib import Path
+html_new = Path(index_path).read_text(encoding="utf-8")
+"og:image" in html_new, "CONFIG.site.ogImage" in html_new
+
+Result
+(True, True)
+Analyzed
+Always show details
+import zipfile, os
+out_zip = "/mnt/data/hypercode-homepage-upgraded.zip"
+if os.path.exists(out_zip):
+    os.remove(out_zip)
+with zipfile.ZipFile(out_zip, "w", compression=zipfile.ZIP_DEFLATED) as z:
+    for root, dirs, files in os.walk(workdir):
+        for f in files:
+            fp = os.path.join(root, f)
+            z.write(fp, os.path.relpath(fp, workdir))
+os.path.getsize(out_zip), out_zip
+
+Result
+(117096, '/mnt/data/hypercode-homepage-upgraded.zip')
+
+Done — I Hyperfocus-upgraded the homepage and made it ship-ready (with a real “Get Started” flow that matches the repo’s current Dev Preview). 
+GitHub
+
+Download the upgraded homepage pack
+
+What I upgraded (the important bits)
+
+CONFIG cleaned + wired to your real repo + GitHub Pages URL, plus docs / research / examples / discussions.
+
+NEW “Get started (Dev Preview)” section (clone → pip install -e . → run the repo example). I avoided pip install hypercode because the README currently treats install as dev-preview / “coming soon” territory. 
+GitHub
+
+No fake stats: left stats as null and added a GitHub API auto-fill (stars + open issues) so it stays honest.
+
+Footer upgraded to a 4-column layout + proper links (still keeps the IDs your JS uses).
+
+Added og.png into the pack so your OG image won’t 404 locally (and matches the config).
+
+If you want to copy/paste into your own index.html
+
+Use the version in the zip as the “source of truth” — but the key change is the Getting Started commands:
+
+git clone https://github.com/welshDog/THE-HYPERCODE
+cd THE-HYPERCODE
+python -m pip install -e .
+hypercode --help
+hypercode run examples/bell_pair.hc --backend qiskit
+
+
+(That flow matches your README’s current Quick Start direction.) 

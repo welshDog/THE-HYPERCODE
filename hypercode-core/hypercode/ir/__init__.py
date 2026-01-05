@@ -1,1 +1,0 @@
-"""HyperCode Intermediate Representation (IR)."""
