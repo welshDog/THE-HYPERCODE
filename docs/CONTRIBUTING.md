@@ -41,6 +41,9 @@ HyperCode is a **neurodivergent-first language** built BY and FOR neurodivergent
 
 ### Getting Started
 
+> **🆕 New Contributor?**
+> Check out [SUGGESTED_ISSUES.md](../.github/SUGGESTED_ISSUES.md) for a list of "Good First Issues" to get you started!
+
 1. Fork the repo
 2. Create a branch: `git checkout -b feature/your-feature`
 3. Make changes
