@@ -7,7 +7,8 @@ export default function Login() {
   const handleLogin = async () => {
     try {
       // 1. Get Auth URL from Bot
-      const res = await axios.get('http://localhost:3001/api/auth/login');
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const res = await axios.get(`${API_URL}/api/auth/login`);
       if (res.data.url) {
         window.location.href = res.data.url;
       }

@@ -19,7 +19,8 @@ export default function AuthCallback() {
     const exchangeCode = async () => {
         try {
             setStatus("Handshaking with Neural Core...");
-            const res = await axios.post('http://localhost:3001/api/auth/exchange', { code });
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+            const res = await axios.post(`${API_URL}/api/auth/exchange`, { code });
             
             if (res.data.user) {
                 setStatus("Access Granted.");

@@ -11,7 +11,8 @@ export default function Leaderboard() {
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        const res = await axios.get('http://localhost:3001/api/leaderboard');
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        const res = await axios.get(`${API_URL}/api/leaderboard`);
         setLeaders(res.data);
       } catch (err) {
         console.error("Failed to fetch leaderboard", err);

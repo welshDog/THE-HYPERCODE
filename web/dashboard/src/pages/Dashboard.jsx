@@ -8,7 +8,8 @@ import StreakCalendar from '../components/StreakCalendar';
 export default function Dashboard() {
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
-  const [stats, setStats] = useState({ balance: 0, streak: 0, rank: 0, totalEarned: 0 });
+  const [stats, setStats] = useState({ balance: 0, streak: 0, rank: 0, totalEarned: 0, history: [] });
+  const [coachAdvice, setCoachAdvice] = useState("Loading neural link...");
   const [sessionType, setSessionType] = useState('Coding');
 
   const user = JSON.parse(localStorage.getItem('hyper_user') || '{}');
@@ -17,18 +18,29 @@ export default function Dashboard() {
   useEffect(() => {
     if (!USER_ID) return;
 
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
     const fetchStats = async () => {
       try {
-        const res = await axios.get(`http://localhost:3001/api/stats/${USER_ID}`);
+        const res = await axios.get(`${API_URL}/api/stats/${USER_ID}`);
         setStats(res.data);
       } catch (err) {
         console.error("Failed to fetch stats", err);
-        // Fallback Mock Data handled by API now, but just in case:
-        setStats({ balance: 0, streak: 0, rank: 0, totalEarned: 0 });
+        setStats({ balance: 0, streak: 0, rank: 0, totalEarned: 0, history: [] });
+      }
+    };
+
+    const fetchAdvice = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/api/coach/advice/${USER_ID}`);
+        setCoachAdvice(res.data.advice);
+      } catch (err) {
+        setCoachAdvice("Coach is offline. Stay focused anyway!");
       }
     };
 
     fetchStats();
+    fetchAdvice();
     const poll = setInterval(fetchStats, 10000); // Poll every 10s
     return () => clearInterval(poll);
   }, [USER_ID]);
@@ -92,8 +104,8 @@ export default function Dashboard() {
                 <button
                   onClick={toggleTimer}
                   className={`px-8 py-4 rounded-xl font-bold text-xl flex items-center gap-2 transition-all ${isActive
-                      ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/50'
-                      : 'bg-hyper-accent text-black hover:bg-cyan-300 shadow-[0_0_20px_rgba(0,255,255,0.4)]'
+                    ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/50'
+                    : 'bg-hyper-accent text-black hover:bg-cyan-300 shadow-[0_0_20px_rgba(0,255,255,0.4)]'
                     }`}
                 >
                   {isActive ? <><Square className="fill-current" /> PAUSE</> : <><Play className="fill-current" /> FOCUS</>}
@@ -109,11 +121,27 @@ export default function Dashboard() {
           </div>
 
           {/* Activity / Calendar */}
-          <StreakCalendar streak={stats.streak} />
+          <StreakCalendar streak={stats.streak} history={stats.history} />
         </div>
 
         {/* Right Col: Stats */}
         <div className="space-y-6">
+
+          {/* AI Coach Widget */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-purple-900/20 border border-purple-500/30 p-6 rounded-2xl relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <Zap className="w-24 h-24" />
+            </div>
+            <h3 className="text-purple-400 font-bold mb-2 flex items-center gap-2">
+              <Zap className="w-5 h-5" /> AI Coach Says...
+            </h3>
+            <p className="text-gray-200 italic">"{coachAdvice}"</p>
+          </motion.div>
+
           {/* Balance Card */}
           <motion.div
             whileHover={{ y: -5 }}
