@@ -31,6 +31,28 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// 🏥 HEALTH CHECK ENDPOINT (Combined Bot & DB Status)
+app.get('/health', (req, res) => {
+  const healthcheck = {
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: Date.now(),
+    services: {
+      database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+      discord: client.ws.status === 0 ? 'connected' : 'disconnected',
+      discord_ping: `${client.ws.ping}ms`
+    }
+  };
+
+  // If critical services are down, return 503
+  if (healthcheck.services.database === 'disconnected' && healthcheck.services.discord === 'disconnected') {
+    healthcheck.status = 'critical_failure';
+    return res.status(503).json(healthcheck);
+  }
+
+  res.status(200).json(healthcheck);
+});
+
 const aiCoach = require('./utils/aiCoach');
 
 // ... (Existing Imports)
@@ -139,8 +161,8 @@ app.get('/api/leaderboard', async (req, res) => {
 });
 
 // Start Express Server IMMEDIATELY (Don't wait for Mongo)
-const server = app.listen(3001, '0.0.0.0', () => {
-  console.log(`🌍 BROski API running on http://localhost:3001`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🌍 BROski API running on http://localhost:${PORT}`);
 });
 
 // Database Connection

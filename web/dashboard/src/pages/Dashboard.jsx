@@ -18,7 +18,10 @@ export default function Dashboard() {
   useEffect(() => {
     if (!USER_ID) return;
 
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    let API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    if (!API_URL.startsWith('http')) {
+      API_URL = `https://${API_URL}`;
+    }
 
     const fetchStats = async () => {
       try {

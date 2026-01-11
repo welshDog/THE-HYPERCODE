@@ -40,8 +40,8 @@ async function runTests() {
 
   // 2. Check Bot API
   try {
-    console.log("\n👉 Testing Bot API (localhost:3001)...");
-    const res = await axios.get('http://localhost:3001/api/stats/test_user_123');
+    console.log("\n👉 Testing Bot API (localhost:3000)...");
+    const res = await axios.get('http://localhost:3000/api/stats/test_user_123');
     console.log("✅ API is ONLINE. Stats Response:", res.data);
     if (res.data.balance !== undefined) {
         report.api = 'PASS';
@@ -56,7 +56,7 @@ async function runTests() {
   // 3. Test Auth Endpoint
   try {
     console.log("\n👉 Testing OAuth Login Generator...");
-    const res = await axios.get('http://localhost:3001/api/auth/login');
+    const res = await axios.get('http://localhost:3000/api/auth/login');
     if (res.data.url && res.data.url.includes('discord.com')) {
         console.log("✅ OAuth URL Generated:", res.data.url);
         report.auth = 'PASS';

@@ -32,4 +32,4 @@ services:
         fromService:
           type: web
           name: hypercode-bot
-          property: hostport
+          property: host

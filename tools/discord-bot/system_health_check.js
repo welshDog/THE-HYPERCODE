@@ -50,9 +50,10 @@ async function runSystemCheck() {
   // 2. API ENDPOINT CHECK
   log("\n2️⃣  Testing Local API Endpoints...", colors.yellow);
   const endpoints = [
-    { name: 'Stats (Mock User)', url: 'http://localhost:3001/api/stats/system_check_user' },
-    { name: 'Auth Login', url: 'http://localhost:3001/api/auth/login' },
-    { name: 'Leaderboard', url: 'http://localhost:3001/api/leaderboard' }
+    { name: 'Health Check', url: 'http://localhost:3000/health' },
+    { name: 'Stats (Mock User)', url: 'http://localhost:3000/api/stats/system_check_user' },
+    { name: 'Auth Login', url: 'http://localhost:3000/api/auth/login' },
+    { name: 'Leaderboard', url: 'http://localhost:3000/api/leaderboard' }
   ];
 
   for (const ep of endpoints) {
