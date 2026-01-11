@@ -54,23 +54,38 @@ class CheckStmt(Statement):
 # --- Quantum Ops ---
 
 @dataclass
-class QGate(Node):
+class QubitRef(Expr):
+    register: str
+    index: int
+
+@dataclass
+class QRegDecl(Statement):
     name: str
-    qubits: List[int]
+    size: int
+    is_quantum: bool = True  # True for QReg, False for CReg
+
+@dataclass
+class QGate(Statement):  # Changed from Node to Statement
+    name: str
+    qubits: List[QubitRef]
     params: List[Expr]
 
 @dataclass
-class QMeasure(Node):
-    qubit: int
-    target: Optional[str]
+class QMeasure(Statement):  # Changed from Node to Statement
+    qubit: QubitRef
+    target: QubitRef
 
 QuantumOp = Union[QGate, QMeasure]
 
 @dataclass
+class Directive(Statement):
+    kind: str  # 'domain' or 'backend'
+    value: str
+
+@dataclass
 class QuantumCircuitDecl(Statement):
     name: str
-    qubits: int
-    ops: List[QuantumOp]
+    body: List[Statement]  # Can contain QRegDecl, QGate, QMeasure
 
 @dataclass
 class Program(Node):

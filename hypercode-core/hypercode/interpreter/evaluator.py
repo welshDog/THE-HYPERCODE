@@ -9,13 +9,12 @@ from typing import Dict, Any, Optional, Union, List, cast
 
 from hypercode.ast.nodes import (
     Program, Statement, DataDecl, SetStmt, PrintStmt, CheckStmt, Block,
-    Expr, Literal, Variable, BinaryOp, QuantumOp,
-    QuantumCircuitDecl, QGate, QMeasure, Node
+    Expr, Literal, Variable, BinaryOp,
+    QuantumCircuitDecl, Directive
 )
 from hypercode.ir.lower_quantum import lower_circuit
-from hypercode.ir.qir_nodes import QModule, QIR, QInstr
+from hypercode.ir.qir_nodes import QModule, QIR
 from hypercode.backends import get_backend, Backend
-from hypercode.results import ExecutionResult
 
 
 def run_qiskit(module: Union[QModule, QIR], shots: int = 1024, seed: Optional[int] = None) -> Dict[str, int]:
@@ -138,6 +137,10 @@ class Evaluator:
                     
             elif isinstance(stmt, QuantumCircuitDecl):
                 self._execute_quantum_circuit(stmt)
+            
+            elif isinstance(stmt, Directive):
+                # Directives are handled by the runner or ignored during execution
+                pass
                 
             else:
                 raise ValueError(f"Unsupported statement type: {type(stmt).__name__}")
@@ -160,7 +163,7 @@ class Evaluator:
         Raises:
             RuntimeError: If there's an error during quantum execution
         """
-        msg = f"QuantumCircuit {stmt.name}: {stmt.qubits} qubits, {len(stmt.ops)} ops"
+        msg = f"QuantumCircuit {stmt.name}: (Dynamic Allocation) qubits, {len(stmt.body)} stmts"
         print(msg)
         self.output.append(msg)
         

@@ -14,13 +14,75 @@ def compile_flow(flow_data: Dict[str, Any]) -> str:
     edges = flow_data.get("edges", [])
     
     # Simple mapping of node IDs to variable names for reference
-    id_to_var = {}
+    id_to_var: Dict[str, str] = {}
     
     code_lines = []
+    
+    # Detect Domain
+    has_quantum = any(n["type"] in ["h", "x", "z", "cx", "measure", "rx"] for n in nodes)
+    has_bio = any(n["type"] in ["sequence", "enzyme", "pcr", "crispr", "goldengate"] for n in nodes)
+    
+    if has_quantum:
+        code_lines.append("#:domain quantum")
+    elif has_bio:
+        code_lines.append("#:domain molecular")
+    else:
+        code_lines.append("#:domain classical")
+
     code_lines.append("# HyperCode Generated from HyperFlow")
     code_lines.append("# ----------------------------------")
     code_lines.append("")
 
+    # --- QUANTUM COMPILATION ---
+    if has_quantum:
+        code_lines.append("@circuit: main")
+        
+        # 1. Identify Qubits (count them)
+        max_qubit = -1
+        quantum_nodes = []
+        
+        # Sort nodes by X position (approximate time)
+        sorted_nodes = sorted(nodes, key=lambda n: n.get("position", {}).get("x", 0))
+        
+        for node in sorted_nodes:
+            ntype = node["type"]
+            if ntype in ["h", "x", "z", "cx", "measure", "rx"]:
+                quantum_nodes.append(node)
+                data = node["data"]
+                # Check indices in data (depending on how frontend stores them)
+                # Frontend QiskitExporter uses: qubitIndex, controlIndex, targetIndex
+                if "qubitIndex" in data: max_qubit = max(max_qubit, int(data["qubitIndex"]))
+                if "controlIndex" in data: max_qubit = max(max_qubit, int(data["controlIndex"]))
+                if "targetIndex" in data: max_qubit = max(max_qubit, int(data["targetIndex"]))
+
+        num_qubits = max_qubit + 1
+        code_lines.append(f"    @init: q = QReg({num_qubits})")
+        code_lines.append(f"    @init: c = CReg({num_qubits})")
+        code_lines.append("")
+        
+        # 2. Generate Operations
+        for node in quantum_nodes:
+            ntype = node["type"]
+            data = node["data"]
+            
+            if ntype == "h":
+                code_lines.append(f"    @hadamard: q[{data.get('qubitIndex', 0)}]")
+            elif ntype == "x":
+                code_lines.append(f"    @x: q[{data.get('qubitIndex', 0)}]")
+            elif ntype == "z":
+                code_lines.append(f"    @z: q[{data.get('qubitIndex', 0)}]")
+            elif ntype == "cx":
+                c = data.get("controlIndex", 0)
+                t = data.get("targetIndex", 1)
+                code_lines.append(f"    @cnot: q[{c}], q[{t}]")
+            elif ntype == "measure":
+                q = data.get("qubitIndex", 0)
+                # Measure to same index classical bit
+                code_lines.append(f"    @measure: q[{q}] -> c[{q}]")
+                
+        code_lines.append("")
+
+    # --- BIO COMPILATION ---
     # 1. First Pass: Identify Sources (Sequence Nodes)
     # In a real compiler, we would topologically sort. 
     # For MVP, we process by type priority: Sequence -> PCR -> CRISPR
@@ -31,7 +93,7 @@ def compile_flow(flow_data: Dict[str, Any]) -> str:
             var_name = _sanitize_name(node["data"].get("label", "seq"))
             id_to_var[node["id"]] = var_name
             sequence = node["data"].get("sequence", "")
-            code_lines.append(f'dna {var_name} = "{sequence}"')
+            code_lines.append(f'@let: {var_name} = "{sequence}"')
 
     code_lines.append("")
 
@@ -45,7 +107,7 @@ def compile_flow(flow_data: Dict[str, Any]) -> str:
             
             enzyme_name = node["data"].get("enzyme", "EcoRI")
             code_lines.append('# Restriction Digest')
-            code_lines.append(f'list {var_name} = digest({input_var}, "{enzyme_name}")')
+            code_lines.append(f'@let: {var_name} = digest({input_var}, "{enzyme_name}")')
 
     # Process PCR Nodes
     for node in nodes:
@@ -58,7 +120,7 @@ def compile_flow(flow_data: Dict[str, Any]) -> str:
             rev = node["data"].get("reversePrimer", "")
             
             code_lines.append('# PCR Amplification')
-            code_lines.append(f'dna {var_name} = pcr({input_var}, fwd="{fwd}", rev="{rev}")')
+            code_lines.append(f'@let: {var_name} = pcr({input_var}, fwd="{fwd}", rev="{rev}")')
 
     # Process CRISPR Nodes
     for node in nodes:
@@ -71,7 +133,7 @@ def compile_flow(flow_data: Dict[str, Any]) -> str:
             pam = node["data"].get("pam", "")
             
             code_lines.append('# CRISPR/Cas9 Editing')
-            code_lines.append(f'dna {var_name} = crispr({input_var}, gRNA="{guide}", pam="{pam}")')
+            code_lines.append(f'@let: {var_name} = crispr({input_var}, gRNA="{guide}", pam="{pam}")')
 
     # Process Golden Gate Nodes
     for node in nodes:
@@ -85,7 +147,7 @@ def compile_flow(flow_data: Dict[str, Any]) -> str:
             parts_str = ", ".join(input_vars)
             
             code_lines.append('# Golden Gate Assembly')
-            code_lines.append(f'dna {var_name} = assembly([{parts_str}], method="GoldenGate", enzyme="{enzyme}")')
+            code_lines.append(f'@let: {var_name} = assembly([{parts_str}], method="GoldenGate", enzyme="{enzyme}")')
 
     return "\n".join(code_lines)
 
