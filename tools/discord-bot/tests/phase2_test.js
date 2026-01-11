@@ -69,6 +69,7 @@ const MockDiscord = {
         setFooter(f) { this.data.footer = f; return this; }
         // Helper
         get description() { return this.data.description; }
+        get title() { return this.data.title; }
     }
 };
 

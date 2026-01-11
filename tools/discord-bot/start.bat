@@ -9,6 +9,7 @@ if not exist ".env" (
 )
 
 echo 📦 Checking dependencies...
+set NODE_OPTIONS=--max-old-space-size=4096
 call npm install
 if %ERRORLEVEL% NEQ 0 (
     echo ❌ ERROR: npm install failed.

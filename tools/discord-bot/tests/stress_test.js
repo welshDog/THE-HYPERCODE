@@ -32,6 +32,12 @@ class MockSession {
     }
 }
 
+class MockEmbed {
+    constructor(data) { this.data = data; }
+    get description() { return this.data.description; }
+    get title() { return this.data.title; }
+}
+
 const MockDB = {
     users: new Map(),
     sessions: [],
@@ -172,7 +178,7 @@ async function runTest(name, fn) {
         const i = mockInteraction("start", { type: "Coding" });
         const res = await command.execute(i);
 
-        assert.ok(res.embeds[0].title.includes("Activated"), "Should reply with Activation");
+        assert.ok(res.embeds[0].data.title.includes("Activated"), "Should reply with Activation");
         const session = await Session.findOne({ userId, status: "active" });
         assert.ok(session, "Session should exist in DB");
         assert.equal(session.sessionType, "Coding");

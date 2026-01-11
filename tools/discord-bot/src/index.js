@@ -43,22 +43,38 @@ client.once('ready', async () => {
   
   // Register Slash Commands
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+  const clientId = client.user.id;
+
   try {
     console.log('🔄 Refreshing application (/) commands...');
-    // In production, use applicationCommands(clientId) for global registration
-    // For dev, use applicationGuildCommands(clientId, guildId) for instant updates
-    if (process.env.GUILD_ID) {
-      await rest.put(
-        Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
-        { body: commands },
-      );
+    
+    // Strategy: If GUILD_ID is present, register there.
+    // If NOT present, register in ALL guilds the bot is currently in (Best for testing)
+    const guildId = process.env.GUILD_ID;
+
+    if (guildId) {
+        console.log(`🎯 Registering commands for Guild: ${guildId}`);
+        await rest.put(
+            Routes.applicationGuildCommands(clientId, guildId),
+            { body: commands },
+        );
     } else {
-       // Fallback/Warning if no guild ID
-       console.log('⚠️ No GUILD_ID provided. Skipping command registration.');
+        console.log('🌐 No GUILD_ID in .env. Registering commands for ALL joined guilds (Dev Mode)...');
+        const guilds = client.guilds.cache.map(g => g.id);
+        if (guilds.length === 0) {
+            console.log('⚠️ Bot is not in any guilds yet. Invite it using the URL generated in Developer Portal!');
+        }
+        for (const gId of guilds) {
+            console.log(`   - Registering for guild: ${gId}`);
+            await rest.put(
+                Routes.applicationGuildCommands(clientId, gId),
+                { body: commands },
+            );
+        }
     }
     console.log('✅ Successfully reloaded application (/) commands.');
   } catch (error) {
-    console.error(error);
+    console.error('❌ Command Registration Failed:', error);
   }
 });
 
