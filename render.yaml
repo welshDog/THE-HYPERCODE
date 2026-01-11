@@ -17,7 +17,7 @@ services:
         sync: false
 
   # 🖥️ DASHBOARD (Frontend)
-  - type: static
+  - type: web
     name: hypercode-dashboard
     env: static
     root: web/dashboard
