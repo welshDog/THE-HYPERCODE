@@ -60,7 +60,7 @@ class Caretaker:
     # TASK DISPATCH & EXECUTION
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     
-    def dispatch(self, task_name: str, *args, agent_filter: Optional[str] = None, **kwargs) -> TaskResult:
+    def dispatch(self, task_name: str, *args: Any, agent_filter: Optional[str] = None, **kwargs: Any) -> TaskResult:
         """
         Single-agent task dispatch.
         
@@ -94,7 +94,7 @@ class Caretaker:
         
         return result
     
-    def orchestrate(self, task_name: str, *args, parallel: bool = True, **kwargs) -> Dict[str, TaskResult]:
+    def orchestrate(self, task_name: str, *args: Any, parallel: bool = True, **kwargs: Any) -> Dict[str, TaskResult]:
         """
         Multi-agent task dispatch.
         
@@ -210,7 +210,7 @@ class Caretaker:
                 output={k: r.output for k, r in results.items() if r.success},
                 duration_seconds=sum(r.duration_seconds for r in results.values()),
                 metadata={'strategy': 'majority', 'success_count': success_count},
-                errors=[r.errors for r in results.values() if not r.success]
+                errors=[e for r in results.values() if not r.success for e in (r.errors or [])]
             )
         
         elif strategy == 'first':

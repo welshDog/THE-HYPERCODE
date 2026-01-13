@@ -57,6 +57,42 @@ def compile_to_v3(ast_node) -> str:
         
     return ""
 
+def validate_flow(flow_data: Dict[str, Any]) -> List[str]:
+    """
+    Validates a flow graph for common errors (orphans, missing inputs).
+    
+    Args:
+        flow_data: The JSON representation of the flow graph.
+        
+    Returns:
+        A list of error/warning messages. Empty if valid.
+    """
+    nodes = flow_data.get("nodes", [])
+    edges = flow_data.get("edges", [])
+    errors = []
+    
+    node_ids = {n["id"] for n in nodes}
+    connected_ids = set()
+    for e in edges:
+        connected_ids.add(e["source"])
+        connected_ids.add(e["target"])
+        
+    # Check for Orphans (Nodes with no edges)
+    # Ignore Init/Sequence nodes as they can be starters
+    for n in nodes:
+        if n["type"] not in ["init", "sequence", "hex"] and n["id"] not in connected_ids:
+             errors.append(f"⚠️ Warning: Node '{n.get('data', {}).get('label', n['id'])}' is disconnected (Orphan).")
+             
+    # Check for Gates without Inputs (Logic error)
+    for n in nodes:
+        if n["type"] in ["gate", "measure", "enzyme", "pcr"]:
+            # Check incoming edges
+            has_input = any(e["target"] == n["id"] for e in edges)
+            if not has_input:
+                errors.append(f"❌ Error: Node '{n.get('data', {}).get('label', n['id'])}' needs an input connection!")
+                
+    return errors
+
 def compile_flow(flow_data: Dict[str, Any]) -> str:
     """
     Compiles a React Flow JSON object into HyperCode source code.
@@ -67,6 +103,13 @@ def compile_flow(flow_data: Dict[str, Any]) -> str:
     Returns:
         A string containing the generated HyperCode program.
     """
+    # 1. Validation Pass
+    validation_errors = validate_flow(flow_data)
+    if validation_errors:
+        # Prepend errors as comments so user sees them in output
+        error_block = "\n".join([f"# {err}" for err in validation_errors])
+        return f"# 🚨 COMPILATION ALERTS:\n{error_block}\n\n# Compilation halted due to critical graph errors.\n"
+
     nodes = flow_data.get("nodes", [])
     edges = flow_data.get("edges", [])
     

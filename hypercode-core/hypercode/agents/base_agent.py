@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Callable
 import time
 
 @dataclass
@@ -17,9 +17,9 @@ class TaskResult:
     output: Any
     duration_seconds: float
     metadata: Dict[str, Any]
-    errors: List[str] = None
+    errors: Optional[List[str]] = None
     
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.errors is None:
             self.errors = []
 
@@ -40,12 +40,12 @@ class BaseAgent(ABC):
             name: Unique agent identifier (e.g., "helix", "qubit", "flow")
         """
         self.name = name
-        self.capabilities: Dict[str, callable] = {}
-        self._task_history = []
+        self.capabilities: Dict[str, Callable] = {}
+        self._task_history: List[TaskResult] = []
         self._register_capabilities()
     
     @abstractmethod
-    def _register_capabilities(self):
+    def _register_capabilities(self) -> None:
         """
         Each agent defines what it can do.
         
@@ -72,7 +72,7 @@ class BaseAgent(ABC):
         """
         return task_name in self.capabilities
     
-    def execute(self, task_name: str, *args, **kwargs) -> TaskResult:
+    def execute(self, task_name: str, *args: Any, **kwargs: Any) -> TaskResult:
         """
         Execute a task and return standardized result.
         

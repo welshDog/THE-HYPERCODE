@@ -228,11 +228,16 @@ def agents_command(args: argparse.Namespace) -> None:
     elif subcmd == "orchestrate":
         task = args.task
         strategy = args.strategy
-        # For orchestrate, we might want args too? Blueprint didn't specify args for orchestrate command but implied it.
-        # Let's support args here too if needed, but for now blueprint says:
-        # orchestrate(task, strategy)
         
-        results = caretaker.orchestrate(task) # Missing args support in blueprint CLI, but let's assume no args for now or add if needed
+        task_args = {}
+        if args.args:
+            try:
+                task_args = json.loads(args.args)
+            except json.JSONDecodeError:
+                print_error("Invalid JSON in --args")
+                sys.exit(1)
+        
+        results = caretaker.orchestrate(task, **task_args)
         synthesized = caretaker.synthesize(results, strategy=strategy)
         
         print_header(f"Orchestration Results ({strategy})")
@@ -244,6 +249,118 @@ def agents_command(args: argparse.Namespace) -> None:
         print(f"  Success: {synthesized.success}")
         if synthesized.output:
             print(f"  Output: {synthesized.output}")
+
+def demo_command(args: argparse.Namespace) -> None:
+    """Handle the demo command."""
+    from hypercode.agents import caretaker, initialize_agents
+    import json
+    import time
+    
+    # Initialize agents
+    initialize_agents()
+    
+    print_header("HYPERCODE LIVE SYSTEM DEMO")
+    print(f"{Colors.CYAN}Mission: End-to-End Bio-Quantum Compilation{Colors.ENDC}")
+    print(f"{Colors.CYAN}Target: BRCA1 Gene Repair via CRISPR/Cas9{Colors.ENDC}")
+    print("-" * 60)
+    
+    # --- Step 1: Helix ---
+    print(f"\n{Colors.BOLD}[1/4] HELIX (Bio-Architect) {Colors.ENDC}")
+    print_info("Designing CRISPR guides for target gene 'BRCA1'...")
+    time.sleep(0.5) # Dramatic pause
+    
+    helix_result = caretaker.dispatch("design_guides", agent_filter="helix", target="BRCA1")
+    if helix_result.success:
+        guides = helix_result.output
+        print_success(f"Generated {len(guides)} candidate guides:")
+        for i, guide in enumerate(guides[:3]):
+             print(f"    {i+1}. {guide}...")
+        if len(guides) > 3:
+            print(f"    ... and {len(guides)-3} more.")
+    else:
+        print_error("Helix failed to design guides.")
+        return
+
+    # --- Step 2: Qubit ---
+    print(f"\n{Colors.BOLD}[2/4] QUBIT (Quantum Core) {Colors.ENDC}")
+    print_info("Optimizing guide selection using Quantum Annealing...")
+    time.sleep(0.5)
+    
+    # Use the guides from Helix
+    qubit_result = caretaker.dispatch(
+        "optimize_guides", 
+        agent_filter="qubit", 
+        guides=guides, 
+        genome="AAATTTCCCGGGAAATTTCCCGGG", # Mock genome context for off-target check
+        num_select=2
+    )
+    
+    if qubit_result.success:
+        selected = qubit_result.output.get("selected_guides", [])
+        backend_used = qubit_result.output.get("backend", "Unknown")
+        print_success(f"Optimization Complete (Backend: {backend_used})")
+        print(f"    Selected Optimal Guides:")
+        for g in selected:
+            print(f"    -> {g}")
+    else:
+        print_error("Qubit failed optimization.")
+        return
+
+    # --- Step 3: Nexus ---
+    print(f"\n{Colors.BOLD}[3/4] NEXUS (System Core) {Colors.ENDC}")
+    print_info("Compiling HyperCode implementation for validation...")
+    time.sleep(0.5)
+    
+    # Mock code snippet using the selected guides
+    code_snippet = f"""
+    domain: molecular
+    backend: quantum
+    
+    func repair_gene() {{
+        guides = {json.dumps(selected)}
+        crispr_apply(guides)
+    }}
+    """
+    
+    nexus_result = caretaker.dispatch("run_tests", agent_filter="nexus", code=code_snippet)
+    
+    if nexus_result.success:
+        print_success("Compilation & Validation Successful")
+        print(f"    Status: {nexus_result.output.get('status', 'unknown')}")
+        if nexus_result.output.get('compiled_length', 0) > 0:
+            print(f"    Compiled Size: {nexus_result.output.get('compiled_length', 0)} bytes")
+        else:
+             print(f"    Syntax Check: Passed (AST Verified)")
+    else:
+        print_error("Nexus failed validation.")
+        return
+
+    # --- Step 4: Scribe ---
+    print(f"\n{Colors.BOLD}[4/4] SCRIBE (Narrator) {Colors.ENDC}")
+    print_info("Generating Mission Report...")
+    time.sleep(0.5)
+    
+    scribe_result = caretaker.dispatch("write_docs", agent_filter="scribe", topic="mission_report")
+    
+    if scribe_result.success:
+        print_success("Report Generated")
+        
+        # Save report to file
+        report_content = scribe_result.output
+        with open("MISSION_REPORT.md", "w", encoding="utf-8") as f:
+            f.write(report_content)
+        print_info("Saved to MISSION_REPORT.md")
+
+        # Just print the first few lines of the report
+        report_preview = report_content.split('\n')[:5]
+        for line in report_preview:
+            print(f"    {line}")
+    else:
+        print_error("Scribe failed to write report.")
+
+    print("-" * 60)
+    print(f"{Colors.HEADER}{Colors.BOLD}MISSION ACCOMPLISHED 🚀{Colors.ENDC}")
+    print("-" * 60)
 
 def version_command(args: argparse.Namespace) -> None:
     """Handle the version command."""
@@ -337,7 +454,12 @@ def main() -> None:
     orchestrate_parser = agents_subparsers.add_parser("orchestrate", help="Orchestrate multiple agents")
     orchestrate_parser.add_argument("task", help="Task to execute")
     orchestrate_parser.add_argument("--strategy", default="consensus", help="Synthesis strategy")
+    orchestrate_parser.add_argument("--args", default="{}", help="Task arguments as JSON")
     orchestrate_parser.set_defaults(func=agents_command)
+
+    # demo command
+    demo_parser = subparsers.add_parser("demo", help="Run live system demo")
+    demo_parser.set_defaults(func=demo_command)
 
     # version command
     version_parser = subparsers.add_parser("version", help="Show version information")

@@ -97,9 +97,20 @@ class Parser:
         if token and token.type == type_:
             self.pos += 1
             return token
+        
+        # Neurodivergent-friendly error reporting
         expected = type_
-        found = token.type if token else "EOF"
-        raise SyntaxError(f"Expected {expected}, found {found} at line {token.line if token else '?'}")
+        found = token.type if token else "End of File (EOF)"
+        line = token.line if token else self.tokens[-1].line if self.tokens else 1
+        
+        # Friendly hints based on common mistakes
+        hint = ""
+        if expected == 'RBRACE' and found == 'EOF':
+            hint = " (Did you forget to close a block with '}'?)"
+        elif expected == 'IDENTIFIER' and found == 'String':
+            hint = " (Variable names shouldn't be in quotes.)"
+            
+        raise SyntaxError(f"🚨 Parser Error at Line {line}:\n   Expected: {expected}\n   Found:    {found}{hint}\n   \n   Check your syntax near here! 🧠")
 
     def parse(self) -> Program:
         statements: List[Statement] = []
@@ -121,8 +132,19 @@ class Parser:
                     if stmt:
                         statements.append(stmt)
             else:
-                self.pos += 1 # Skip stray tokens? Or raise error?
-                # raise SyntaxError(f"Unexpected token {self.current()}")
+                # Friendly Error for Unexpected Tokens
+                token = self.current()
+                line = token.line if token else 1
+                value = token.value if token else "Unknown"
+                type_ = token.type if token else "Unknown"
+                
+                hint = ""
+                if value == ';':
+                     hint = " (HyperCode doesn't use semicolons! You can just delete it.)"
+                elif value.startswith('?'):
+                     hint = " (Did you mean to ask a question? Check the docs!)"
+                
+                raise SyntaxError(f"🚨 Parser Error at Line {line}:\n   Unexpected Token: '{value}'\n   Type: {type_}{hint}\n   \n   I got confused here! 🧠")
         return Program(statements=statements)
 
     def parse_directive(self) -> Directive:

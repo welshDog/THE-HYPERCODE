@@ -1,10 +1,12 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
+import json
+import asyncio
 
 from hypercode.compiler import compile_flow
-from hypercode.simulator import simulate_flow
+from hypercode.simulator import simulate_flow, simulate_flow_generator
 
 app = FastAPI(title="HyperCode Backend API")
 
@@ -53,6 +55,38 @@ async def compile_endpoint(flow: FlowRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+@app.websocket("/ws/debug")
+async def websocket_debug_endpoint(websocket: WebSocket):
+    """
+    Flow State Guardian (Live Debugger) Endpoint.
+    Streams execution events to the frontend.
+    """
+    await websocket.accept()
+    try:
+        while True:
+            # Wait for flow data from client
+            data = await websocket.receive_text()
+            flow_data = json.loads(data)
+            
+            # Run the generator simulation
+            # We iterate over the generator and send events
+            for event in simulate_flow_generator(flow_data):
+                await websocket.send_json(event)
+                # Artificial delay for visual effect (ADHD dopamine pacing)
+                await asyncio.sleep(0.5) 
+            
+            # Send completion message
+            await websocket.send_json({"type": "execution_complete"})
+            
+    except WebSocketDisconnect:
+        print("Client disconnected from Debugger")
+    except Exception as e:
+        print(f"Debugger Error: {e}")
+        try:
+            await websocket.send_json({"type": "error", "message": str(e)})
+        except:
+            pass
 
 if __name__ == "__main__":
     import uvicorn

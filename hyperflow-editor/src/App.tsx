@@ -34,6 +34,8 @@ import InitNode from './nodes/InitNode';
 import GateNode from './nodes/GateNode';
 import MeasureNode from './nodes/MeasureNode';
 import CompilerPanel from './components/CompilerPanel';
+import { useDebugger } from './hooks/useDebugger';
+import DebuggerPanel from './components/DebuggerPanel';
 
 // --- React Flow Types ---
 const nodeTypes: NodeTypes = {
@@ -67,7 +69,59 @@ function App() {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isHyperfocus, setIsHyperfocus] = useState(false);
   const [isZenMode, setIsZenMode] = useState(false);
-  const [isDyslexiaMode, setIsDyslexiaMode] = useState(false);
+  // Persistent Dyslexia Mode (Neurodivergent-First Default)
+  const [isDyslexiaMode, setIsDyslexiaMode] = useState(() => {
+    return localStorage.getItem('hypercode:dyslexiaMode') === 'true';
+  });
+
+  // Persist Dyslexia Mode changes
+  useEffect(() => {
+    localStorage.setItem('hypercode:dyslexiaMode', String(isDyslexiaMode));
+  }, [isDyslexiaMode]);
+
+  // --- Flow State Guardian (Debugger) ---
+  const {
+    isConnected,
+    isRunning,
+    activeNodeId,
+    completedNodes,
+    logs,
+    results,
+    startDebug,
+    stopDebug
+  } = useDebugger();
+
+  // Update Node Glow Effects
+  useEffect(() => {
+    setNodes((nds) =>
+      nds.map((node) => {
+        // Remove existing debug classes
+        let newClass = (node.className || '')
+          .replace('node-active-glow', '')
+          .replace('node-completed', '')
+          .trim();
+
+        if (node.id === activeNodeId) {
+          newClass += ' node-active-glow';
+        } else if (completedNodes.has(node.id)) {
+          newClass += ' node-completed';
+        }
+
+        // Only update if changed
+        if (newClass.trim() !== (node.className || '').trim()) {
+          return { ...node, className: newClass.trim() };
+        }
+        return node;
+      })
+    );
+  }, [activeNodeId, completedNodes, setNodes]);
+
+  const handleStartDebug = useCallback(() => {
+    if (!rfInstance) return;
+    const flow = rfInstance.toObject();
+    startDebug(flow);
+  }, [startDebug]);
+
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [rfInstance, setRfInstance] = useState<any>(null);
 
@@ -623,6 +677,15 @@ function App() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         code={exportCode}
+      />
+
+      <DebuggerPanel
+        isConnected={isConnected}
+        isRunning={isRunning}
+        logs={logs}
+        results={results}
+        onStart={handleStartDebug}
+        onStop={stopDebug}
       />
 
       {isCompilerOpen && (
