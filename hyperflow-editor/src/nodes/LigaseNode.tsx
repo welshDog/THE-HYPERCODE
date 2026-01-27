@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useCallback } from 'react';
 import { Handle, Position, type NodeProps, useReactFlow, useNodes, useEdges } from 'reactflow';
 import styles from './LigaseNode.module.css';
 import { type LigaseNodeData, type EnzymeNodeData } from '../engine/BioTypes';
@@ -35,11 +35,11 @@ const LigaseNode: React.FC<NodeProps<LigaseNodeData>> = ({ id, data }) => {
     return [];
   }, [upstreamNode]);
 
-  const [isPulse, setIsPulse] = React.useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const setData = (patch: Partial<LigaseNodeData>) => {
+  const setData = useCallback((patch: Partial<LigaseNodeData>) => {
     setNodes(nds => nds.map(node => node.id === id ? { ...node, data: { ...node.data, ...patch } } : node));
-  };
+  }, [setNodes, id]);
 
   useEffect(() => {
     if (fragments.length === 0) {
@@ -78,9 +78,9 @@ const LigaseNode: React.FC<NodeProps<LigaseNodeData>> = ({ id, data }) => {
       data.errorMessage !== errorMessage; // Track error message change
 
     if (changed) {
-      if (isValid) {
-        setIsPulse(true);
-        setTimeout(() => setIsPulse(false), 600);
+      if (isValid && containerRef.current) {
+        containerRef.current.classList.add(styles.pulse);
+        setTimeout(() => containerRef.current && containerRef.current.classList.remove(styles.pulse), 600);
       }
       setData({
         selectedLeftFragmentIndex: leftIdx,
@@ -90,7 +90,7 @@ const LigaseNode: React.FC<NodeProps<LigaseNodeData>> = ({ id, data }) => {
         errorMessage
       });
     }
-  }, [fragments, data.selectedLeftFragmentIndex, data.selectedRightFragmentIndex, data.isValid, data.ligatedSequence, data.errorMessage, data.circular, id, setNodes]);
+  }, [fragments, data.selectedLeftFragmentIndex, data.selectedRightFragmentIndex, data.isValid, data.ligatedSequence, data.errorMessage, data.circular, id, setNodes, setData]);
 
   const handleLeftChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setData({ selectedLeftFragmentIndex: parseInt(e.target.value, 10) });
@@ -117,7 +117,7 @@ const LigaseNode: React.FC<NodeProps<LigaseNodeData>> = ({ id, data }) => {
   const isError = !data.isValid;
 
   return (
-    <div className={`${styles.container} ${isError ? styles.error : ''} ${isPulse ? styles.pulse : ''} ${data.circular && !isError ? styles.circular : ''}`}>
+    <div ref={containerRef} className={`${styles.container} ${isError ? styles.error : ''} ${data.circular && !isError ? styles.circular : ''}`}>
       <Handle type="target" position={Position.Left} className={styles.handle} />
       <div className={styles.header}><span>🧬</span> Ligase</div>
       <div className={styles.body}>

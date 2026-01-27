@@ -1,26 +1,34 @@
-name: Bug report
-description: Report a problem or unexpected behavior
-labels: [bug]
-title: "bug: <short description>"
-body:
-- type: textarea
-  id: description
-  attributes:
-    label: Description
-    description: What happened? What did you expect?
-    placeholder: Clear, concise description of the bug
-  validations:
-    required: true
-- type: textarea
-  id: steps
-  attributes:
-    label: Steps to reproduce
-    placeholder: 1) Go to ...\n2) Click ...\n3) Observe ...
-  validations:
-    required: true
-- type: textarea
-  id: context
-  attributes:
-    label: Context
-    description: Versions, OS, branch, environment, screenshots
+---
+name: 🐛 Bug Report
+about: Create a report to help us improve HyperCode
+title: "[BUG] "
+labels: bug
+assignees: ''
 
+---
+
+## 🐛 Bug Description
+**What happened?**
+(A clear and concise description of the bug.)
+
+**What did you expect to happen?**
+(A clear and concise description of what you expected.)
+
+## 📸 Screenshots / Video
+(If applicable, add screenshots to help explain your problem. Visuals are super helpful!)
+
+## 🧠 Context (Neurodivergent-Friendly Check)
+- [ ] This bug caused sensory overload (flashing, loud noise, etc.)
+- [ ] This bug made the UI confusing or cluttered
+- [ ] The error message was scary or unclear
+
+## 💻 Environment
+- OS: [e.g. Windows 11]
+- Browser: [e.g. Chrome 99]
+- HyperCode Version: [e.g. 0.1.0]
+
+## 📋 Steps to Reproduce
+1. Go to '...'
+2. Click on '...'
+3. Scroll down to '...'
+4. See error

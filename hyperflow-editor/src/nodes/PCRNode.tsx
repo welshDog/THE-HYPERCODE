@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Handle, Position, type NodeProps, useReactFlow, useNodes, useEdges } from 'reactflow';
 import styles from './PCRNode.module.css';
-import { type PCRNodeData } from '../engine/BioTypes';
+import { type PCRNodeData, type SequenceNodeData } from '../engine/BioTypes';
 import { calculateTm, performPCR } from '../engine/PCRUtils';
 
 const PCRNode: React.FC<NodeProps<PCRNodeData>> = ({ id, data }) => {
@@ -16,7 +16,7 @@ const PCRNode: React.FC<NodeProps<PCRNodeData>> = ({ id, data }) => {
   // Inputs from Upstream
   const connection = edges.find(edge => edge.target === id);
   const upstreamNode = connection ? nodes.find(n => n.id === connection.source) : null;
-  const templateDNA = (upstreamNode as any)?.data?.sequence || '';
+  const templateDNA = (upstreamNode?.data as SequenceNodeData | undefined)?.sequence || '';
 
   // Calculate Logic
   useEffect(() => {

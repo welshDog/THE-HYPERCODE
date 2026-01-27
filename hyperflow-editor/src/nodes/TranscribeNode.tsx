@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Handle, Position, type NodeProps, useReactFlow, useNodes, useEdges } from 'reactflow';
 import styles from './TranscribeNode.module.css';
 import { type TranscribeNodeData, type SequenceNodeData } from '../engine/BioTypes';
@@ -17,32 +17,14 @@ const TranscribeNode: React.FC<NodeProps<TranscribeNodeData>> = ({ id, data }) =
     return node?.data as SequenceNodeData | undefined;
   }, [edges, nodes, id]);
 
-  const [isPulse, setIsPulse] = React.useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   // 2. Reactive Logic: Compute RNA when DNA source changes
-  useEffect(() => {
+  const { expectedSequence, expectedIsValid } = useMemo(() => {
     if (sourceNodeData) {
       // Check upstream validity
       if (sourceNodeData.isValid === false) {
-        // Propagate error
-        if (data.isValid !== false) {
-          setNodes((nds) =>
-            nds.map((node) => {
-              if (node.id === id) {
-                return {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    sequence: '', // Clear output on error
-                    isValid: false,
-                  },
-                };
-              }
-              return node;
-            })
-          );
-        }
-        return;
+        return { expectedSequence: '', expectedIsValid: false };
       }
 
       if (sourceNodeData.sequence) {
@@ -52,11 +34,6 @@ const TranscribeNode: React.FC<NodeProps<TranscribeNodeData>> = ({ id, data }) =
         // Handle Strand Selection
         if (data.isCodingStrand === false) {
           // Template Strand: Complement then replace T->U
-          // A->U, T->A, G->C, C->G
-          // Reverse complement if reading 3'->5'?
-          // Standard convention: User inputs 5'->3' template strand.
-          // mRNA is complementary and antiparallel.
-          // For simplicity in this tool: "Template Strand" means we take the complement.
           rna = dna.split('').map(base => {
             switch (base) {
               case 'A': return 'U';
@@ -70,50 +47,49 @@ const TranscribeNode: React.FC<NodeProps<TranscribeNodeData>> = ({ id, data }) =
           // Coding Strand (Default): Just replace T->U
           rna = dna.replace(/T/g, 'U');
         }
-
-        // Only update if changed to avoid loops
-        if (data.sequence !== rna) {
-          // Trigger pulse
-          setIsPulse(true);
-          setTimeout(() => setIsPulse(false), 600);
-
-          setNodes((nds) =>
-            nds.map((node) => {
-              if (node.id === id) {
-                return {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    sequence: rna,
-                    isValid: true, // Valid if upstream is valid
-                  },
-                };
-              }
-              return node;
-            })
-          );
-        }
+        return { expectedSequence: rna, expectedIsValid: true };
       }
     } else if (!sourceNodeData && data.sequence) {
       // Reset if disconnected
+      return { expectedSequence: '', expectedIsValid: true };
+    }
+
+    // Default: keep current if no source but also no sequence (initial state)
+    // Or if source exists but has no sequence yet
+    return { expectedSequence: data.sequence || '', expectedIsValid: true };
+  }, [sourceNodeData, data.isCodingStrand, data.sequence]);
+
+  useEffect(() => {
+    const needsUpdate = data.sequence !== expectedSequence || data.isValid !== expectedIsValid;
+
+    if (needsUpdate) {
+      if (data.sequence !== expectedSequence && expectedIsValid && expectedSequence !== '' && containerRef.current) {
+        containerRef.current.classList.add(styles.pulse);
+        setTimeout(() => containerRef.current && containerRef.current.classList.remove(styles.pulse), 600);
+      }
+
       setNodes((nds) =>
         nds.map((node) => {
           if (node.id === id) {
             return {
               ...node,
-              data: { ...node.data, sequence: '', isValid: true },
+              data: {
+                ...node.data,
+                sequence: expectedSequence,
+                isValid: expectedIsValid,
+              },
             };
           }
           return node;
         })
       );
     }
-  }, [sourceNodeData, id, setNodes, data.sequence, data.isValid]);
+  }, [expectedSequence, expectedIsValid, data.sequence, data.isValid, id, setNodes]);
 
   const isError = data.isValid === false;
 
   return (
-    <div className={`${styles.container} ${isError ? styles.error : ''} ${isPulse ? styles.pulse : ''}`}>
+    <div ref={containerRef} className={`${styles.container} ${isError ? styles.error : ''}`}>
       <Handle type="target" position={Position.Left} className={styles.handle} />
 
       <div className={styles.header}>

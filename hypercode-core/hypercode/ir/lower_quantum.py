@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 from hypercode.ast.nodes import (
     QuantumCircuitDecl, QGate as AstQGate, QMeasure as AstQMeasure,
-    Expr, Literal, Variable, BinaryOp
+    Expr, Literal, Variable, BinaryOp, QRegDecl, QubitRef
 )
 from hypercode.ir.qir_nodes import (
     QModule, QInstr, QAlloc, QGate as IrQGate, QMeasure as IrQMeasure, QEnd
@@ -19,30 +19,62 @@ class QuantumLowerer:
     def lower(self, node: QuantumCircuitDecl) -> QModule:
         instrs: List[QInstr] = []
         
-        # 1. Allocate qubits
-        # We assume linear allocation from 0 to node.qubits - 1
-        instrs.append(QAlloc(start_index=0, count=node.qubits))
+        # 1. Allocate qubits based on QRegDecl statements
+        # Map register name to start index
+        reg_map: Dict[str, int] = {}
+        total_qubits = 0
+        
+        # Scan for registers first
+        for stmt in node.body:
+            if isinstance(stmt, QRegDecl) and stmt.is_quantum:
+                reg_map[stmt.name] = total_qubits
+                total_qubits += stmt.size
+        
+        # Allocate all qubits in one block (simplification for QIR v0)
+        instrs.append(QAlloc(start_index=0, count=total_qubits))
         
         # 2. Lower operations
-        for op in node.ops:
-            if isinstance(op, AstQGate):
-                # Evaluate parameters to floats
-                # In a real compiler, we might keep them as symbolic if they are runtime variables
-                # For this v0, we try to resolve to constant floats.
+        for stmt in node.body:
+            if isinstance(stmt, AstQGate):
+                # Resolve parameters
                 resolved_params = []
-                for p in op.params:
+                for p in stmt.params:
                     val = self.evaluate_const_expr(p)
                     resolved_params.append(val)
                 
+                # Resolve qubits
+                resolved_qubits = []
+                for qref in stmt.qubits:
+                    idx = self._resolve_qubit(qref, reg_map)
+                    resolved_qubits.append(idx)
+                
+                # Resolve gate name
+                gate_name = stmt.name.lower()
+                if gate_name == 'hadamard':
+                    gate_name = 'h'
+                elif gate_name == 'cnot':
+                    gate_name = 'cx'
+                elif gate_name == 'phase':
+                    gate_name = 'p' # Or rz? Phase usually is u1 or p. Qiskit has p.
+                
                 instrs.append(IrQGate(
-                    name=op.name,
-                    qubits=op.qubits,
+                    name=gate_name,
+                    qubits=resolved_qubits,
                     params=resolved_params
                 ))
-            elif isinstance(op, AstQMeasure):
-                target = op.target if op.target is not None else f"c{op.qubit}"
+            elif isinstance(stmt, AstQMeasure):
+                # Resolve qubit
+                q_idx = self._resolve_qubit(stmt.qubit, reg_map)
+                
+                # Resolve target (classical register)
+                # For now, just use string representation of target
+                if stmt.target.index != -1:
+                    target = f"{stmt.target.register}[{stmt.target.index}]"
+                else:
+                    target = stmt.target.register
+                
                 instrs.append(IrQMeasure(
-                    qubit=op.qubit,
+                    qubit=q_idx,
                     target=target
                 ))
         
@@ -50,6 +82,20 @@ class QuantumLowerer:
         instrs.append(QEnd())
         
         return QModule(name=node.name, instructions=instrs)
+
+    def _resolve_qubit(self, ref: QubitRef, reg_map: Dict[str, int]) -> int:
+        if ref.register not in reg_map:
+            raise ValueError(f"Unknown quantum register '{ref.register}'")
+        
+        base = reg_map[ref.register]
+        offset = ref.index
+        if offset == -1:
+            # Handle whole register operations? For now, assume index 0 if not specified?
+            # Or raise error if strict. bell_pair.hc uses explicit indices.
+            offset = 0 
+            
+        return base + offset
+
 
     def evaluate_const_expr(self, expr: Expr) -> float:
         if isinstance(expr, Literal):

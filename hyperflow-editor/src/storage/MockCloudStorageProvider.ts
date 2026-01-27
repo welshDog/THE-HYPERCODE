@@ -97,8 +97,9 @@ export class MockCloudStorageProvider implements IStorageProvider {
         throw new Error('Invalid flow file: missing nodes or edges');
       }
       return flow as SavedFlow;
-    } catch (e) {
-      throw new Error('Invalid JSON file');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`Invalid JSON file: ${msg}`);
     }
   }
 }

@@ -1,9 +1,11 @@
 import re
-from typing import List, Optional, Tuple, Set
+from typing import List, Optional
 from hypercode.ast.nodes import (
-    Program, Statement, DataDecl, SetStmt, PrintStmt, CheckStmt, Block,
+    Program, Statement,
     Expr, Literal, Variable, BinaryOp,
-    QGate, QMeasure, QuantumCircuitDecl, QuantumOp
+    DataDecl, SetStmt, PrintStmt, CheckStmt, Block,
+    QGate, QMeasure, QuantumCircuitDecl, Directive, QRegDecl, QubitRef,
+    CrisprEdit, PcrReaction, QuantumCrispr
 )
 
 class Token:
@@ -13,27 +15,25 @@ class Token:
         self.line = line
         self.col = col
     
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Token({self.type}, '{self.value}')"
 
 class Lexer:
     TOKEN_TYPES = [
+        ('DIRECTIVE', r'#:\s*\w+'), # #:domain, #:backend
         ('COMMENT', r'#.*'),
-        ('AT_DATA', r'@data'),
-        ('AT_SET', r'@set'),
-        ('AT_PRINT', r'@print'),
-        ('AT_CHECK', r'@check'),
-        ('AT_QUANTUM', r'@quantum'),
-        ('AT_END', r'@end'),
+        ('AT_CMD', r'@\w+'),        # @circuit, @init, @hadamard, etc.
         ('ARROW', r'->'),
+        ('LBRACK', r'\['),
+        ('RBRACK', r'\]'),
         ('LBRACE', r'\{'),
         ('RBRACE', r'\}'),
         ('LPAREN', r'\('),
         ('RPAREN', r'\)'),
         ('COMMA', r','),
         ('COLON', r':'),
+        ('ASSIGN', r'='),
         ('OP', r'(==|>=|<=|>|<|\+|\-|/|\*)'),
-        ('QREF', r'q\d+'),  # Matches q0, q1, q99
         ('NUMBER', r'\d+(\.\d+)?'),
         ('STRING', r'"[^"]*"'),
         ('IDENTIFIER', r'[a-zA-Z_][a-zA-Z0-9_]*'),
@@ -56,11 +56,6 @@ class Lexer:
                 if match:
                     value = match.group(0)
                     if type_ != 'WHITESPACE' and type_ != 'COMMENT':
-                        # Handle keywords that might be lexed as identifiers if we aren't careful
-                        # But since our regexes are ordered, keywords come first.
-                        # Wait, 'MEASURE' is not a keyword token, it's an IDENTIFIER in this list.
-                        # We'll handle it in the parser or promote it here.
-                        # Actually let's just let it be IDENTIFIER and check value in parser.
                         tokens.append(Token(type_, value, self.line, self.col))
                     
                     # Update position
@@ -75,13 +70,14 @@ class Lexer:
                     break
             
             if not match:
-                raise SyntaxError(f"Unexpected character '{self.text[self.pos]}' at line {self.line}, col {self.col}")
+                # Skip unknown characters (like BOM or weird whitespace)
+                # print(f"Warning: Skipping unexpected character '{self.text[self.pos]}'")
+                self.pos += 1
+                self.col += 1
                 
         return tokens
 
 class Parser:
-    GATES = {"H", "X", "Y", "Z", "CX", "CZ", "RX", "RY", "RZ"}
-
     def __init__(self, tokens: List[Token]):
         self.tokens = tokens
         self.pos = 0
@@ -101,198 +97,411 @@ class Parser:
         if token and token.type == type_:
             self.pos += 1
             return token
+        
+        # Neurodivergent-friendly error reporting
         expected = type_
-        actual = token.type if token else "EOF"
-        raise SyntaxError(f"Expected {expected}, got {actual} at line {token.line if token else 'EOF'}")
-    
-    def match(self, type_: str) -> bool:
-        token = self.current()
-        if token and token.type == type_:
-            self.pos += 1
-            return True
-        return False
+        found = token.type if token else "End of File (EOF)"
+        line = token.line if token else self.tokens[-1].line if self.tokens else 1
+        
+        # Friendly hints based on common mistakes
+        hint = ""
+        if expected == 'RBRACE' and found == 'EOF':
+            hint = " (Did you forget to close a block with '}'?)"
+        elif expected == 'IDENTIFIER' and found == 'String':
+            hint = " (Variable names shouldn't be in quotes.)"
+            
+        raise SyntaxError(f"🚨 Parser Error at Line {line}:\n   Expected: {expected}\n   Found:    {found}{hint}\n   \n   Check your syntax near here! 🧠")
 
     def parse(self) -> Program:
-        statements = []
+        statements: List[Statement] = []
         while self.current():
+            token = self.current()
+            if not token:
+                break
+                
+            if token.type == 'DIRECTIVE':
+                statements.append(self.parse_directive())
+            elif token.type == 'AT_CMD':
+                cmd = token.value
+                if cmd == '@circuit':
+                    statements.append(self.parse_circuit())
+                else:
+                    # Top-level statement or error
+                    # For now, assume it's part of a global script if valid
+                    stmt = self.parse_statement()
+                    if stmt:
+                        statements.append(stmt)
+            else:
+                # Friendly Error for Unexpected Tokens
+                token = self.current()
+                line = token.line if token else 1
+                value = token.value if token else "Unknown"
+                type_ = token.type if token else "Unknown"
+                
+                hint = ""
+                if value == ';':
+                     hint = " (HyperCode doesn't use semicolons! You can just delete it.)"
+                elif value.startswith('?'):
+                     hint = " (Did you mean to ask a question? Check the docs!)"
+                
+                raise SyntaxError(f"🚨 Parser Error at Line {line}:\n   Unexpected Token: '{value}'\n   Type: {type_}{hint}\n   \n   I got confused here! 🧠")
+        return Program(statements=statements)
+
+    def parse_directive(self) -> Directive:
+        # #:domain
+        token = self.consume('DIRECTIVE')
+        kind = token.value.split(':')[1].strip()
+        # Expect generic identifier next? 
+        # bell_pair.hc: #:domain quantum
+        # Lexer sees #:domain as DIRECTIVE. Next token is IDENTIFIER "quantum"
+        
+        curr = self.current()
+        if curr and curr.type == 'COLON': # Handle optional colon
+            self.consume('COLON')
+             
+        value = self.consume('IDENTIFIER').value
+        return Directive(kind=kind, value=value)
+
+    def parse_circuit(self) -> QuantumCircuitDecl:
+        self.consume('AT_CMD') # @circuit
+        self.consume('COLON')
+        name = self.consume('IDENTIFIER').value
+        
+        body: List[Statement] = []
+        # Parse until next @circuit or EOF
+        while self.current():
+            token = self.current()
+            if not token:
+                break
+                
+            if token.type == 'AT_CMD' and token.value == '@circuit':
+                break
+            if token.type == 'DIRECTIVE':
+                break # Should directives be inside?
+                
             stmt = self.parse_statement()
             if stmt:
-                statements.append(stmt)
-        return Program(statements)
-    
-    def parse_statement(self) -> Statement:
+                body.append(stmt)
+            # If stmt is None (e.g. @doc), continue loop
+
+                
+        return QuantumCircuitDecl(name=name, body=body)
+
+    def parse_statement(self) -> Optional[Statement]:
+        """
+        Parse a single statement from the token stream.
+        
+        Returns:
+            A Statement node or None if the statement is a directive or comment.
+        """
         token = self.current()
-        if token.type == 'AT_DATA':
-            return self.parse_data_decl()
-        elif token.type == 'AT_SET':
-            return self.parse_set_stmt()
-        elif token.type == 'AT_PRINT':
-            return self.parse_print_stmt()
-        elif token.type == 'AT_CHECK':
-            return self.parse_check_stmt()
-        elif token.type == 'AT_QUANTUM':
-            return self.parse_quantum_circuit()
-        else:
-            raise SyntaxError(f"Unexpected token {token.type} ({token.value}) at start of statement")
+        if not token: return None
+        
+        if token.type == 'AT_CMD':
+            cmd = token.value
+            if cmd == '@doc':
+                self.consume('AT_CMD')
+                self.consume('COLON')
+                self.consume('STRING')
+                return None # Ignore doc strings for AST? Or add DocStmt?
+            elif cmd == '@init':
+                return self.parse_init()
+            elif cmd == '@measure':
+                return self.parse_measure()
+            elif cmd == '@data':
+                return self.parse_data()
+            elif cmd == '@set':
+                return self.parse_set()
+            elif cmd == '@print':
+                return self.parse_print()
+            elif cmd == '@check':
+                return self.parse_check()
+            elif cmd == '@crispr':
+                return self.parse_crispr()
+            elif cmd == '@pcr':
+                return self.parse_pcr()
+            elif cmd == '@quantum_crispr':
+                return self.parse_quantum_crispr()
+            else:
+                return self.parse_gate()
+        
+        # Fallback for expressions or other statements
+        self.pos += 1
+        return None
 
-    def parse_data_decl(self) -> DataDecl:
-        self.consume('AT_DATA')
+    def parse_data(self) -> DataDecl:
+        """Parse a data declaration: @data name: value"""
+        # @data x: 42
+        self.consume('AT_CMD') # @data
         name = self.consume('IDENTIFIER').value
         self.consume('COLON')
-        value = self.parse_expr()
-        return DataDecl(name, value)
+        val = self.parse_expr()
+        return DataDecl(name=name, value=val)
 
-    def parse_set_stmt(self) -> SetStmt:
-        self.consume('AT_SET')
+    def parse_set(self) -> SetStmt:
+        """Parse a variable assignment: @set name: expr"""
+        # @set x: x + 1
+        self.consume('AT_CMD') # @set
         name = self.consume('IDENTIFIER').value
         self.consume('COLON')
-        value = self.parse_expr()
-        return SetStmt(name, value)
+        expr = self.parse_expr()
+        return SetStmt(name=name, value=expr)
 
-    def parse_print_stmt(self) -> PrintStmt:
-        self.consume('AT_PRINT')
+    def parse_print(self) -> PrintStmt:
+        """Parse a print statement: @print(expr)"""
+        # @print(x)
+        self.consume('AT_CMD') # @print
         self.consume('LPAREN')
         expr = self.parse_expr()
         self.consume('RPAREN')
-        return PrintStmt(expr)
+        return PrintStmt(expr=expr)
 
-    def parse_check_stmt(self) -> CheckStmt:
-        self.consume('AT_CHECK')
+    def parse_check(self) -> CheckStmt:
+        """Parse a conditional check: @check(expr) -> { body }"""
+        # @check(x > 5) -> { ... }
+        self.consume('AT_CMD') # @check
         self.consume('LPAREN')
+        
         condition = self.parse_expr()
+        
         self.consume('RPAREN')
         self.consume('ARROW')
-        
         self.consume('LBRACE')
-        # Simplification for v0: Just a list of statements
-        block_content = self.parse_block_body()
-        return CheckStmt(condition, block_content)
-
-    def parse_block_body(self) -> Block:
-        stmts = []
+        
+        body: List[Statement] = []
         while self.current() and self.current().type != 'RBRACE':
-            stmts.append(self.parse_statement())
+            stmt = self.parse_statement()
+            if stmt:
+                body.append(stmt)
+        
         self.consume('RBRACE')
-        return Block(stmts)
+        return CheckStmt(condition=condition, true_block=Block(statements=body))
 
-    # --- Quantum Parsing ---
+    def parse_init(self) -> QRegDecl:
+        """Parse a register initialization: @init: name = QReg(size)"""
+        self.consume('AT_CMD') # @init
 
-    def parse_quantum_circuit(self) -> QuantumCircuitDecl:
-        self.consume('AT_QUANTUM')
+        self.consume('COLON')
         name = self.consume('IDENTIFIER').value
+        self.consume('ASSIGN')
         
-        # Expect 'qubits' keyword (lexed as IDENTIFIER)
-        token = self.consume('IDENTIFIER')
-        if token.value != 'qubits':
-            raise SyntaxError(f"Expected 'qubits', got '{token.value}'")
-            
-        qubits_count_token = self.consume('NUMBER')
-        qubits_count = int(float(qubits_count_token.value)) # Handle 2.0 if typed, though int expected
-
-        ops = []
-        while self.current() and self.current().type != 'AT_END':
-            # Skip newlines implicitly handled by lexer (WHITESPACE skips)
-            # But wait, our lexer skips whitespace/newlines.
-            # So we just check for tokens.
-            
-            token = self.current()
-            if token.type == 'IDENTIFIER':
-                if token.value == 'MEASURE':
-                    ops.append(self.parse_qmeasure())
-                elif token.value in self.GATES:
-                    ops.append(self.parse_qgate())
-                else:
-                    raise SyntaxError(f"Unknown quantum operation or gate: {token.value}")
-            else:
-                 raise SyntaxError(f"Expected gate or MEASURE, got {token.type}")
-
-        self.consume('AT_END')
-        return QuantumCircuitDecl(name, qubits_count, ops)
-
-    def parse_qgate(self) -> QGate:
-        name_token = self.consume('IDENTIFIER')
-        gate_name = name_token.value
+        type_name = self.consume('IDENTIFIER').value # QReg or CReg
+        is_quantum = type_name == 'QReg'
         
-        # Parse params if present: gate(param) q0
-        # OR as per user sketch: GATENAME qref+ param_list?
-        # User sketch: H q0; RZ(pi) q0
-        # Let's support both for flexibility, but prioritize sketch: RZ(pi) q0 makes sense?
-        # Wait, user sketch says: gate_op := GATENAME qref+ param_list?
-        # BUT example says: H q0
-        # Example for parameterized? The user asked: "Want the syntax to allow inline params like RZ(PI/2) q0?"
-        # Let's assume standard is GATENAME (params)? qrefs
+        self.consume('LPAREN')
+        size = int(self.consume('NUMBER').value)
+        self.consume('RPAREN')
         
-        # Check for optional params
-        params = []
-        if self.current().type == 'LPAREN':
+        return QRegDecl(name=name, size=size, is_quantum=is_quantum)
+
+    def parse_gate(self) -> QGate:
+        # @hadamard: q[0]
+        # @rz(3.14): q[0]
+        gate_token = self.consume('AT_CMD')
+        gate_name = gate_token.value[1:] # strip @
+        
+        params: List[Expr] = []
+        curr = self.current()
+        if curr and curr.type == 'LPAREN':
             self.consume('LPAREN')
-            params.append(self.parse_expr())
-            while self.match('COMMA'):
+            while True:
+                curr_inner = self.current()
+                if not curr_inner or curr_inner.type == 'RPAREN':
+                    break
                 params.append(self.parse_expr())
+                if self.current() and self.current().type == 'COMMA': # type: ignore
+                    self.consume('COMMA')
             self.consume('RPAREN')
-
-        qubits = []
-        while self.current() and self.current().type == 'QREF':
-            q_token = self.consume('QREF')
-            # q0 -> 0
-            q_idx = int(q_token.value[1:])
-            qubits.append(q_idx)
-        
-        if not qubits:
-            raise SyntaxError(f"Gate {gate_name} requires at least one qubit")
-
-        return QGate(gate_name, qubits, params)
-
-    def parse_qmeasure(self) -> QMeasure:
-        # MEASURE q0 -> c0
-        self.consume('IDENTIFIER') # MEASURE (already checked)
-        
-        q_token = self.consume('QREF')
-        q_idx = int(q_token.value[1:])
-        
-        target = None
-        if self.match('ARROW'):
-            target_token = self.consume('IDENTIFIER')
-            target = target_token.value
             
-        return QMeasure(q_idx, target)
+        self.consume('COLON')
+        
+        qubits: List[QubitRef] = []
+        qubits.append(self.parse_qubit_ref())
+        while self.current() and self.current().type == 'COMMA': # type: ignore
+            self.consume('COMMA')
+            qubits.append(self.parse_qubit_ref())
+            
+        return QGate(name=gate_name, qubits=qubits, params=params)
 
-    # --- Expression Parsing ---
+    def parse_measure(self) -> QMeasure:
+        # @measure: q -> c
+        # Or @measure: q[0] -> c[0]
+        self.consume('AT_CMD')
+        self.consume('COLON')
+        
+        source = self.parse_qubit_ref()
+        self.consume('ARROW')
+        target = self.parse_qubit_ref()
+        
+        return QMeasure(qubit=source, target=target)
+
+    def parse_qubit_ref(self) -> QubitRef:
+        # q or q[0]
+        name = self.consume('IDENTIFIER').value
+        index = -1 # All?
+        
+        curr = self.current()
+        if curr and curr.type == 'LBRACK':
+            self.consume('LBRACK')
+            index = int(self.consume('NUMBER').value)
+            self.consume('RBRACK')
+            
+        return QubitRef(register=name, index=index)
+
+    def parse_crispr(self) -> CrisprEdit:
+        # @crispr: target, "guide", "pam"
+        self.consume('AT_CMD')
+        self.consume('COLON')
+        target = self.consume('IDENTIFIER').value
+        self.consume('COMMA')
+        guide_token = self.consume('STRING')
+        guide = guide_token.value.strip('"').strip("'")
+        
+        pam = "NGG"
+        if self.current() and self.current().type == 'COMMA':
+            self.consume('COMMA')
+            pam_token = self.consume('STRING')
+            pam = pam_token.value.strip('"').strip("'")
+            
+        return CrisprEdit(target=target, guide=guide, pam=pam)
+
+    def parse_pcr(self) -> PcrReaction:
+        # @pcr: template, "fwd", "rev"
+        self.consume('AT_CMD')
+        self.consume('COLON')
+        template = self.consume('IDENTIFIER').value
+        self.consume('COMMA')
+        fwd = self.consume('STRING').value.strip('"').strip("'")
+        self.consume('COMMA')
+        rev = self.consume('STRING').value.strip('"').strip("'")
+        
+        return PcrReaction(template=template, fwd_primer=fwd, rev_primer=rev)
+
+    def parse_quantum_crispr(self) -> QuantumCrispr:
+        # @quantum_crispr
+        #     target = "X"
+        #     genome = "Y"
+        #     num_guides = 3
+        #     result -> var
+        self.consume('AT_CMD')
+        
+        # Optional colon
+        if self.current() and self.current().type == 'COLON':
+            self.consume('COLON')
+            
+        target = ""
+        genome = ""
+        num_guides = 1
+        result_var = "result"
+        
+        while self.current():
+            token = self.current()
+            if not token:
+                break
+            
+            # Stop if we hit start of next command or directive
+            if token.type in ['AT_CMD', 'DIRECTIVE']:
+                break
+                
+            if token.type == 'IDENTIFIER':
+                key = token.value
+                
+                # Check for "result -> var"
+                if key == 'result':
+                    self.consume('IDENTIFIER') # consume 'result'
+                    if self.current() and self.current().type == 'ARROW':
+                        self.consume('ARROW')
+                        result_var = self.consume('IDENTIFIER').value
+                        continue
+                
+                # Check for "key = value"
+                next_token = self.peek()
+                if next_token and next_token.type == 'ASSIGN':
+                    self.consume('IDENTIFIER') # consume key
+                    self.consume('ASSIGN')
+                    
+                    curr = self.current()
+                    if not curr:
+                        break
+                    
+                    val_token = self.consume(curr.type) # Consume value
+                    raw_val = val_token.value
+                    
+                    if val_token.type == 'STRING':
+                        val = raw_val.strip('"').strip("'")
+                    elif val_token.type == 'NUMBER':
+                        val = raw_val
+                    else:
+                         val = raw_val # fallback
+                    
+                    if key == 'target':
+                        target = str(val)
+                    elif key == 'genome':
+                        genome = str(val)
+                    elif key == 'num_guides':
+                        num_guides = int(float(val))
+                    continue
+            
+            # If we are here, we didn't match a pattern, so we might be done or syntax error
+            # For robustness, break
+            break
+            
+        return QuantumCrispr(target=target, genome=genome, num_guides=num_guides, result_var=result_var)
 
     def parse_expr(self) -> Expr:
+        # Simple recursive descent for expressions
         left = self.parse_term()
         
-        if self.current() and self.current().type == 'OP':
+        curr = self.current()
+        if curr and curr.type == 'OP':
             op = self.consume('OP').value
-            right = self.parse_term()
-            return BinaryOp(left, op, right)
+            right = self.parse_expr()
+            return BinaryOp(left=left, op=op, right=right)
         
         return left
 
     def parse_term(self) -> Expr:
+        """
+        Parse a single term in an expression.
+        Terms are either numbers, identifiers, strings, or parenthesized expressions.
+        """
         token = self.current()
+        if not token:
+             raise SyntaxError("Unexpected EOF in expr")
+             
         if token.type == 'NUMBER':
+            val = float(token.value) if '.' in token.value else int(token.value)
             self.consume('NUMBER')
-            val = float(token.value)
-            if val.is_integer():
-                val = int(val)
-            return Literal(val)
-        elif token.type == 'STRING':
-            self.consume('STRING')
-            return Literal(token.value.strip('"'))
+            return Literal(value=val)
         elif token.type == 'IDENTIFIER':
-            self.consume('IDENTIFIER')
-            return Variable(token.value)
+            name = self.consume('IDENTIFIER').value
+            return Variable(name=name)
+        elif token.type == 'STRING':
+             val = self.consume('STRING').value
+             if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
+                 val = val[1:-1]
+             return Literal(value=val)
         elif token.type == 'LPAREN':
             self.consume('LPAREN')
             expr = self.parse_expr()
             self.consume('RPAREN')
             return expr
-        else:
-            raise SyntaxError(f"Unexpected token in expression: {token}")
+        
+        raise SyntaxError(f"Unexpected token in expr: {token}")
 
-def parse(code: str) -> Program:
-    lexer = Lexer(code)
+def parse(text: str) -> Program:
+    lexer = Lexer(text)
     tokens = lexer.tokenize()
     parser = Parser(tokens)
     return parser.parse()
+
+class HyperCodeParser:
+    """
+    High-level parser wrapper that handles tokenization and parsing.
+    This class is the main entry point for external consumers.
+    """
+    def __init__(self, code: str):
+        self.code = code
+    
+    def parse(self) -> Program:
+        return parse(self.code)

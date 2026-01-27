@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Handle, Position, type NodeProps, useReactFlow, useNodes, useEdges } from 'reactflow';
 import styles from './TranslateNode.module.css';
 import { type TranslateNodeData, type TranscribeNodeData } from '../engine/BioTypes';
@@ -35,30 +35,12 @@ const TranslateNode: React.FC<NodeProps<TranslateNodeData>> = ({ id, data }) => 
     return node?.data as TranscribeNodeData | undefined;
   }, [edges, nodes, id]);
 
-  const [isPulse, setIsPulse] = React.useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
+  const { expectedSequence, expectedIsValid } = useMemo(() => {
     if (sourceNodeData) {
-      // Check upstream validity
       if (sourceNodeData.isValid === false) {
-        if (data.isValid !== false) {
-          setNodes((nds) =>
-            nds.map((node) => {
-              if (node.id === id) {
-                return {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    sequence: '',
-                    isValid: false,
-                  },
-                };
-              }
-              return node;
-            })
-          );
-        }
-        return;
+        return { expectedSequence: '', expectedIsValid: false };
       }
 
       if (sourceNodeData.sequence) {
@@ -72,48 +54,46 @@ const TranslateNode: React.FC<NodeProps<TranslateNodeData>> = ({ id, data }) => 
             protein += CODON_TABLE[codon] || '?';
           }
         }
-
-        if (data.sequence !== protein) {
-          // Trigger pulse
-          setIsPulse(true);
-          setTimeout(() => setIsPulse(false), 600);
-
-          setNodes((nds) =>
-            nds.map((node) => {
-              if (node.id === id) {
-                return {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    sequence: protein,
-                    isValid: true,
-                  },
-                };
-              }
-              return node;
-            })
-          );
-        }
+        return { expectedSequence: protein, expectedIsValid: true };
       }
     } else if (!sourceNodeData && data.sequence) {
+      return { expectedSequence: '', expectedIsValid: true };
+    }
+
+    return { expectedSequence: data.sequence || '', expectedIsValid: true };
+  }, [sourceNodeData, data.sequence]);
+
+  useEffect(() => {
+    const needsUpdate = data.sequence !== expectedSequence || data.isValid !== expectedIsValid;
+
+    if (needsUpdate) {
+      if (data.sequence !== expectedSequence && expectedIsValid && expectedSequence !== '' && containerRef.current) {
+        containerRef.current.classList.add(styles.pulse);
+        setTimeout(() => containerRef.current && containerRef.current.classList.remove(styles.pulse), 600);
+      }
+
       setNodes((nds) =>
         nds.map((node) => {
           if (node.id === id) {
             return {
               ...node,
-              data: { ...node.data, sequence: '', isValid: true },
+              data: {
+                ...node.data,
+                sequence: expectedSequence,
+                isValid: expectedIsValid,
+              },
             };
           }
           return node;
         })
       );
     }
-  }, [sourceNodeData, id, setNodes, data.sequence, data.isValid]);
+  }, [expectedSequence, expectedIsValid, data.sequence, data.isValid, id, setNodes]);
 
   const isError = data.isValid === false;
 
   return (
-    <div className={`${styles.container} ${isError ? styles.error : ''} ${isPulse ? styles.pulse : ''}`}>
+    <div ref={containerRef} className={`${styles.container} ${isError ? styles.error : ''}`}>
       <Handle type="target" position={Position.Left} className={styles.handle} />
 
       <div className={styles.header}>
