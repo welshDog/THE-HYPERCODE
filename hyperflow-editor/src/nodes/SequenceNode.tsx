@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Handle, Position, type NodeProps, useReactFlow } from 'reactflow';
 import styles from './SequenceNode.module.css';
 import { type SequenceNodeData } from '../engine/BioTypes';
@@ -6,29 +6,17 @@ import { type SequenceNodeData } from '../engine/BioTypes';
 const SequenceNode: React.FC<NodeProps<SequenceNodeData>> = ({ id, data }) => {
   const { setNodes } = useReactFlow();
   const [sequence, setSequence] = useState(data.sequence || '');
-  const [isValid, setIsValid] = useState(data.isValid ?? true);
-  const [gcContent, setGcContent] = useState(data.gcContent || 0);
+  const cleanSeq = useMemo(() => sequence.replace(/\s/g, '').toUpperCase(), [sequence]);
+  const isValid = useMemo(() => /^[ATGC]*$/.test(cleanSeq), [cleanSeq]);
+  const gcContent = useMemo(() => {
+    if (!isValid || cleanSeq.length === 0) return 0;
+    const gcCount = (cleanSeq.match(/[GC]/g) || []).length;
+    return Math.round((gcCount / cleanSeq.length) * 100);
+  }, [isValid, cleanSeq]);
 
   // Validate and stats calculation
-  const validateAndStats = useCallback((seq: string) => {
-    // Regex: Only A, T, C, G (case insensitive)
-    // Allowing whitespace for formatting, but stripping it for logic
-    const cleanSeq = seq.replace(/\s/g, '').toUpperCase();
-    const valid = /^[ATGC]*$/.test(cleanSeq);
-
-    setIsValid(valid);
-
-    let newGc = 0;
-    if (valid && cleanSeq.length > 0) {
-      const gcCount = (cleanSeq.match(/[GC]/g) || []).length;
-      newGc = Math.round((gcCount / cleanSeq.length) * 100);
-      setGcContent(newGc);
-    } else {
-      setGcContent(0);
-    }
-
-    // Update node data (propagating to the graph)
-    // using setNodes to ensure reactivity
+  const pushGraphUpdate = useCallback((nextSeq: string, nextValid: boolean, nextGc: number) => {
+    const normalized = nextSeq.replace(/\s/g, '').toUpperCase();
     setNodes((nodes) =>
       nodes.map((node) => {
         if (node.id === id) {
@@ -36,10 +24,10 @@ const SequenceNode: React.FC<NodeProps<SequenceNodeData>> = ({ id, data }) => {
             ...node,
             data: {
               ...node.data,
-              sequence: cleanSeq,
-              isValid: valid,
-              length: cleanSeq.length,
-              gcContent: newGc,
+              sequence: normalized,
+              isValid: nextValid,
+              length: normalized.length,
+              gcContent: nextGc,
             },
           };
         }
@@ -51,13 +39,17 @@ const SequenceNode: React.FC<NodeProps<SequenceNodeData>> = ({ id, data }) => {
   const handleChange = (evt: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = evt.target.value;
     setSequence(val);
-    validateAndStats(val);
+    const normalized = val.replace(/\s/g, '').toUpperCase();
+    const valid = /^[ATGC]*$/.test(normalized);
+    const gcCount = valid && normalized.length > 0 ? (normalized.match(/[GC]/g) || []).length : 0;
+    const nextGc = valid && normalized.length > 0 ? Math.round((gcCount / normalized.length) * 100) : 0;
+    pushGraphUpdate(val, valid, nextGc);
   };
 
-  // Initial check
-  useEffect(() => {
-    validateAndStats(sequence);
-  }, []);
+  // Initial graph sync from existing data
+  useMemo(() => {
+    pushGraphUpdate(sequence, isValid, gcContent);
+  }, [sequence, isValid, gcContent, pushGraphUpdate]);
 
   return (
     <div className={`${styles.container} ${!isValid ? styles.error : ''}`}>

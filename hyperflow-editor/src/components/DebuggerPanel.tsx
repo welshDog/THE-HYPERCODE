@@ -5,7 +5,6 @@ interface DebuggerPanelProps {
   isConnected: boolean;
   isRunning: boolean;
   logs: string[];
-  results: Record<string, any>;
   onStart: () => void;
   onStop: () => void;
 }
@@ -14,7 +13,6 @@ const DebuggerPanel: React.FC<DebuggerPanelProps> = ({
   isConnected,
   isRunning,
   logs,
-  results,
   onStart,
   onStop
 }) => {

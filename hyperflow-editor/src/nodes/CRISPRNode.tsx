@@ -22,9 +22,8 @@ const CRISPRNode: React.FC<NodeProps<CRISPRNodeData>> = ({ id, data }) => {
 
   // Check if upstream data has 'sequence' or 'editedSequence' or 'amplicon'
   // We need a standard 'sequence' field for DNA.
-  const targetDNA = (upstreamNode as any)?.data?.sequence ||
-    (upstreamNode as any)?.data?.amplicon ||
-    (upstreamNode as any)?.data?.editedSequence || '';
+  const upstreamData = (upstreamNode?.data as { sequence?: string; amplicon?: string; editedSequence?: string } | undefined);
+  const targetDNA = upstreamData?.sequence || upstreamData?.amplicon || upstreamData?.editedSequence || '';
 
   // Logic
   useEffect(() => {

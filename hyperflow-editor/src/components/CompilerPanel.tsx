@@ -1,9 +1,18 @@
 import React, { useState } from 'react';
 import { Panel } from 'reactflow';
 
+interface QuantumCounts { [state: string]: number }
+interface QuantumSimulation { counts: QuantumCounts }
+
+interface PlasmidPart { label?: string; seq: string; left?: string; right?: string }
+interface BioResultCommon { type: string; efficiency?: string; off_target_score?: string; sequence?: string; log?: string[] }
+interface PlasmidResult extends BioResultCommon { type: 'plasmid'; parts: PlasmidPart[]; length: number; isCircular: boolean }
+type BioResult = BioResultCommon | PlasmidResult
+export type SimulationPayload = { counts?: QuantumCounts } & Record<string, BioResult>
+
 interface CompilerPanelProps {
   code: string;
-  simulation?: Record<string, any>;
+  simulation?: SimulationPayload;
   onClose: () => void;
 }
 
@@ -20,10 +29,10 @@ const CompilerPanel: React.FC<CompilerPanelProps> = ({ code, simulation, onClose
     let source = serializer.serializeToString(svgElement);
 
     // Add name spaces
-    if (!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
+    if (!source.includes('xmlns="http://www.w3.org/2000/svg"')) {
       source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
     }
-    if (!source.match(/^<svg[^>]+"http\:\/\/www\.w3\.org\/1999\/xlink"/)) {
+    if (!source.includes('xmlns:xlink="http://www.w3.org/1999/xlink"')) {
       source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
     }
 
@@ -64,34 +73,33 @@ const CompilerPanel: React.FC<CompilerPanelProps> = ({ code, simulation, onClose
     );
   };
 
-  const renderQuantumResults = (result: any) => {
-    // Basic quantum result rendering (histogram later)
+  const renderQuantumResults = (result: QuantumSimulation) => {
     return (
-      <div style={{ padding: '10px' }}>
-        <h3 style={{ fontSize: '14px', marginBottom: '10px' }}>Quantum Measurement Results</h3>
+      <div style={{ padding: '16px' }}>
+        <h3 style={{ fontSize: '16px', marginBottom: '12px', color: '#2d3436' }}>Quantum Measurement Results</h3>
         {result.counts ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            {Object.entries(result.counts).map(([state, count]: [string, any]) => (
-              <div key={state} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontFamily: 'monospace', width: '30px' }}>|{state}⟩</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {Object.entries(result.counts).map(([state, count]: [string, number]) => (
+              <div key={state} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <span style={{ fontFamily: 'Fira Code, monospace', minWidth: '40px', color: '#2d3436' }}>|{state}⟩</span>
                 <div style={{
-                  height: '20px',
-                  width: `${(count as number) * 5}px`, // Scale for visual
+                  height: '24px',
+                  width: `${Math.max(24, count * 6)}px`,
                   background: '#6c5ce7',
-                  borderRadius: '4px'
+                  borderRadius: '6px'
                 }} />
-                <span style={{ fontSize: '12px' }}>{count as number}</span>
+                <span style={{ fontSize: '13px', color: '#636e72' }}>{count}</span>
               </div>
             ))}
           </div>
         ) : (
-          <div>No measurement data available.</div>
+          <div style={{ color: '#636e72' }}>No measurement data available.</div>
         )}
       </div>
     );
   };
 
-  const renderLinearMap = (result: any) => {
+  const renderLinearMap = (result: PlasmidResult) => {
     if (!result.parts || result.parts.length === 0) return null;
 
     const partWidth = 120;
@@ -119,14 +127,14 @@ const CompilerPanel: React.FC<CompilerPanelProps> = ({ code, simulation, onClose
           </button>
         </div>
         <svg id="linear-map-svg" width={totalWidth} height={height} viewBox={`0 0 ${totalWidth} ${height}`}>
-          {result.parts.map((part: any, index: number) => {
+          {result.parts.map((part: PlasmidPart, index: number) => {
             const x = 20 + index * (partWidth + gapWidth);
             const y = 30;
             const color = colors[index % colors.length];
 
             // Determine connection to next part
             let connectionStatus = 'none'; // none, match, mismatch
-            let nextPart = result.parts[index + 1];
+            const nextPart = result.parts[index + 1] as PlasmidPart | undefined;
 
             if (nextPart) {
               if (part.right === nextPart.left) {
@@ -144,9 +152,9 @@ const CompilerPanel: React.FC<CompilerPanelProps> = ({ code, simulation, onClose
                     y: e.clientY,
                     content: (
                       <div>
-                        <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{part.label || `Part ${index + 1}`}</div>
-                        <div>Length: {part.seq?.length || '?'} bp</div>
-                        <div style={{ fontFamily: 'monospace', marginTop: '4px', color: '#dfe6e9' }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '6px', color: '#2d3436' }}>{part.label || `Part ${index + 1}`}</div>
+                        <div style={{ marginBottom: '4px', color: '#636e72' }}>Length: {part.seq.length} bp</div>
+                        <div style={{ fontFamily: 'Fira Code, monospace', marginTop: '4px', color: '#636e72' }}>
                           {part.left} → {part.right}
                         </div>
                       </div>
@@ -182,8 +190,8 @@ const CompilerPanel: React.FC<CompilerPanelProps> = ({ code, simulation, onClose
                 </text>
 
                 {/* Overhang Labels */}
-                <text x={x + 5} y={y + 55} fontSize="10" fill="#636e72" fontFamily="monospace">{part.left}</text>
-                <text x={x + partWidth - 25} y={y + 55} fontSize="10" fill="#636e72" fontFamily="monospace">{part.right}</text>
+                <text x={x + 5} y={y + 55} fontSize="12" fill="#636e72" fontFamily="Fira Code, monospace">{part.left}</text>
+                <text x={x + partWidth - 25} y={y + 55} fontSize="12" fill="#636e72" fontFamily="Fira Code, monospace">{part.right}</text>
 
                 {/* Connection to Next */}
                 {nextPart && (
@@ -226,7 +234,7 @@ const CompilerPanel: React.FC<CompilerPanelProps> = ({ code, simulation, onClose
     );
   };
 
-  const renderPlasmidMap = (result: any) => {
+  const renderPlasmidMap = (result: PlasmidResult) => {
     if (!result.parts || result.parts.length === 0) return null;
 
     const isCircular = result.isCircular;
@@ -246,11 +254,11 @@ const CompilerPanel: React.FC<CompilerPanelProps> = ({ code, simulation, onClose
 
     // Calculate effective lengths for visualization segments
     // We use seq length as weight
-    const totalWeight = result.parts.reduce((sum: number, part: any) => sum + part.seq.length, 0);
+    const totalWeight = result.parts.reduce((sum: number, part: PlasmidPart) => sum + part.seq.length, 0);
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '15px' }}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%', marginBottom: '5px' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%', marginBottom: '8px' }}>
           <button
             onClick={() => handleExportSVG('plasmid-map-svg', 'plasmid-map.svg')}
             style={{
@@ -267,7 +275,7 @@ const CompilerPanel: React.FC<CompilerPanelProps> = ({ code, simulation, onClose
           </button>
         </div>
         <svg id="plasmid-map-svg" width="200" height="200" viewBox="0 0 200 200">
-          {result.parts.map((part: any, index: number) => {
+          {result.parts.map((part: PlasmidPart, index: number) => {
             const weight = part.seq.length;
             const sweepAngle = (weight / totalWeight) * (isCircular ? 360 : 350); // Leave gap if linear
 
@@ -333,7 +341,7 @@ const CompilerPanel: React.FC<CompilerPanelProps> = ({ code, simulation, onClose
   };
 
   return (
-    <Panel position="bottom-center" style={{
+    <Panel position="bottom-center" data-testid="compiler-panel" style={{
       width: '80%',
       maxWidth: '900px',
       height: '400px',
@@ -357,7 +365,7 @@ const CompilerPanel: React.FC<CompilerPanelProps> = ({ code, simulation, onClose
         fontFamily: 'Inter, sans-serif',
         height: '50px'
       }}>
-        <div style={{ display: 'flex', gap: '20px', height: '100%' }}>
+        <div style={{ display: 'flex', gap: '20px', height: '100%' }} role="tablist" aria-label="Compiler Panel Tabs">
           <button
             onClick={() => setActiveTab('code')}
             style={{
@@ -370,6 +378,9 @@ const CompilerPanel: React.FC<CompilerPanelProps> = ({ code, simulation, onClose
               height: '100%',
               padding: '0 10px'
             }}
+            role="tab"
+            aria-selected={activeTab === 'code'}
+            aria-controls="compiler-tabpanel-code"
           >
             💻 Generated Code
           </button>
@@ -385,12 +396,15 @@ const CompilerPanel: React.FC<CompilerPanelProps> = ({ code, simulation, onClose
               height: '100%',
               padding: '0 10px'
             }}
+            role="tab"
+            aria-selected={activeTab === 'simulation'}
+            aria-controls="compiler-tabpanel-simulation"
           >
             🧪 Simulation Results
           </button>
         </div>
 
-        <button
+        <button data-testid="compiler-panel-close-button"
           onClick={onClose}
           style={{
             background: 'transparent',
@@ -413,7 +427,7 @@ const CompilerPanel: React.FC<CompilerPanelProps> = ({ code, simulation, onClose
         flexDirection: 'column'
       }}>
         {activeTab === 'code' ? (
-          <pre style={{
+          <pre id="compiler-tabpanel-code" role="tabpanel" aria-label="Generated Code" style={{
             margin: 0,
             padding: '20px',
             color: '#2d3436',
@@ -425,7 +439,7 @@ const CompilerPanel: React.FC<CompilerPanelProps> = ({ code, simulation, onClose
             {code}
           </pre>
         ) : (
-          <div style={{ padding: '20px', overflow: 'auto', height: '100%' }}>
+          <div id="compiler-tabpanel-simulation" style={{ padding: '20px', overflow: 'auto', height: '100%' }} role="tabpanel" aria-label="Simulation Results">
             {!simulation ? (
               <div style={{
                 color: '#b2bec3',
@@ -440,65 +454,82 @@ const CompilerPanel: React.FC<CompilerPanelProps> = ({ code, simulation, onClose
                 <div>Run a simulation to see results</div>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {/* Quantum Results */}
-                {simulation.counts && renderQuantumResults(simulation)}
+                {simulation.counts && renderQuantumResults({ counts: simulation.counts })}
 
                 {/* Biological Results */}
-                {Object.entries(simulation).map(([nodeId, result]) => (
-                  <div key={nodeId} style={{
-                    background: 'white',
-                    padding: '15px',
-                    borderRadius: '8px',
-                    boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
-                    borderLeft: `4px solid ${result.type === 'edited_dna' ? '#e17055' : result.type === 'amplicon' ? '#fdcb6e' : '#74b9ff'}`
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                      <span style={{ fontWeight: 'bold', color: '#2d3436', textTransform: 'uppercase', fontSize: '12px' }}>
-                        {result.type}
-                      </span>
-                      {result.efficiency && (
+                {(() => {
+                  const entries = Object.entries(simulation).filter(([key]) => key !== 'counts');
+                  return entries.map(([nodeId, result]) => {
+                    const r = result as BioResult;
+                    const efficiency = r.efficiency;
+                    const offTarget = r.off_target_score;
+                    const badges: React.ReactNode[] = [];
+                    if (efficiency) {
+                      badges.push(
                         <span style={{ background: '#55efc4', padding: '2px 8px', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold' }}>
-                          Yield: {result.efficiency}
+                          Yield: {efficiency}
                         </span>
-                      )}
-                      {result.off_target_score && (
+                      );
+                    }
+                    if (offTarget) {
+                      badges.push(
                         <span style={{ background: '#ffeaa7', padding: '2px 8px', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold' }}>
-                          Off-Target: {result.off_target_score}
+                          Off-Target: {offTarget}
                         </span>
-                      )}
-                    </div>
+                      );
+                    }
+                    const borderColor = r.type === 'edited_dna' ? '#e17055' : (r.type === 'amplicon' ? '#fdcb6e' : '#74b9ff');
+                    const cardStyle = {
+                      background: 'white',
+                      padding: '16px',
+                      borderRadius: '8px',
+                      boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+                      borderLeft: `4px solid ${borderColor}`
+                    } as React.CSSProperties;
+                    return (
+                      <div key={nodeId} style={cardStyle}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', gap: '12px' }}>
+                          <span style={{ fontWeight: 'bold', color: '#2d3436', textTransform: 'uppercase', fontSize: '12px' }}>
+                            {r.type}
+                          </span>
+                          {badges.map((b, i) => <span key={i}>{b}</span>)}
+                        </div>
 
-                    {result.type === 'plasmid' && renderPlasmidMap(result)}
+                        {r.type === 'plasmid' && renderPlasmidMap(r as PlasmidResult)}
 
-                    {result.sequence && (
-                      <div style={{
-                        fontFamily: 'monospace',
-                        wordBreak: 'break-all',
-                        background: '#dfe6e9',
-                        padding: '8px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        color: '#2d3436',
-                        marginBottom: '10px'
-                      }}>
-                        {result.sequence}
+                        {r.sequence && (
+                          <div style={{
+                            fontFamily: 'Fira Code, monospace',
+                            wordBreak: 'break-all',
+                            background: '#f0f3f5',
+                            padding: '12px',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            color: '#2d3436',
+                            marginBottom: '12px'
+                          }}>
+                            {r.sequence}
+                          </div>
+                        )}
+
+                        {Array.isArray(r.log) && r.log.length > 0 && (
+                          <div style={{ fontSize: '12px', color: '#636e72', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {r.log.map((entry: string, i: number) => (
+                              <div key={i}>• {entry}</div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    )}
-
-                    {result.log && result.log.length > 0 && (
-                      <div style={{ fontSize: '12px', color: '#636e72' }}>
-                        {result.log.map((entry: string, i: number) => (
-                          <div key={i}>• {entry}</div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))
-                }
+                    );
+                  });
+                })()}
               </div>
             )}
           </div>
+        )}
+      </div>
       {renderTooltip()}
     </Panel>
   );

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useCallback } from 'react';
 import { Handle, Position, type NodeProps, useReactFlow, useNodes, useEdges } from 'reactflow';
 import styles from './EnzymeNode.module.css';
 import { type EnzymeNodeData, type SequenceNodeData } from '../engine/BioTypes';
@@ -16,11 +16,11 @@ const EnzymeNode: React.FC<NodeProps<EnzymeNodeData>> = ({ id, data }) => {
     return node?.data as SequenceNodeData | undefined;
   }, [edges, nodes, id]);
 
-  const [isPulse, setIsPulse] = React.useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const setData = (patch: Partial<EnzymeNodeData>) => {
+  const setData = useCallback((patch: Partial<EnzymeNodeData>) => {
     setNodes(nds => nds.map(node => node.id === id ? { ...node, data: { ...node.data, ...patch } } : node));
-  };
+  }, [id, setNodes]);
 
   useEffect(() => {
     if (sourceNodeData) {
@@ -68,8 +68,10 @@ const EnzymeNode: React.FC<NodeProps<EnzymeNodeData>> = ({ id, data }) => {
           data.enzyme !== enzymeName;
 
         if (changed) {
-          setIsPulse(true);
-          setTimeout(() => setIsPulse(false), 600);
+          if (containerRef.current) {
+            containerRef.current.classList.add(styles.pulse);
+            setTimeout(() => containerRef.current && containerRef.current.classList.remove(styles.pulse), 600);
+          }
           setData({ fragments: uiFragments, sites: usedSites, isValid: true, enzyme: enzymeName, mode });
         }
       }
@@ -78,7 +80,7 @@ const EnzymeNode: React.FC<NodeProps<EnzymeNodeData>> = ({ id, data }) => {
         setData({ fragments: [], sites: [], isValid: true });
       }
     }
-  }, [sourceNodeData, id, setNodes, data.fragments, data.sites, data.enzyme, data.mode, data.isValid]);
+  }, [sourceNodeData, id, setNodes, data.fragments, data.sites, data.enzyme, data.mode, data.isValid, setData]);
 
   const isError = data.isValid === false;
 
@@ -96,7 +98,7 @@ const EnzymeNode: React.FC<NodeProps<EnzymeNodeData>> = ({ id, data }) => {
   }).join(' | ');
 
   return (
-    <div className={`${styles.container} ${isError ? styles.error : ''} ${isPulse ? styles.pulse : ''}`}>
+    <div ref={containerRef} className={`${styles.container} ${isError ? styles.error : ''}`}>
       <Handle type="target" position={Position.Left} className={styles.handle} />
       <div className={styles.header}><span>{isError ? '⚠️' : '✂️'}</span> Restriction Enzyme</div>
       <div className={styles.body}>

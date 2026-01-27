@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Handle, Position, type NodeProps, useReactFlow, useNodes, useEdges } from 'reactflow';
 import styles from './EnzymeNode.module.css'; // Reusing enzyme styles for consistency
 import { type GoldenGateNodeData } from '../engine/BioTypes';
@@ -8,7 +8,7 @@ const GoldenGateNode: React.FC<NodeProps<GoldenGateNodeData>> = ({ id, data }) =
   const nodes = useNodes();
   const edges = useEdges();
 
-  const [isPulse, setIsPulse] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Identify connected source nodes (parts)
   const incomingParts = useMemo(() => {
@@ -20,7 +20,7 @@ const GoldenGateNode: React.FC<NodeProps<GoldenGateNodeData>> = ({ id, data }) =
         const node = nodes.find(n => n.id === edge.source);
         return {
           id: node?.id || '',
-          data: node?.data as any,
+          data: node?.data as { label?: string; sequence?: string },
           y: node?.position.y || 0
         };
       })
@@ -39,8 +39,10 @@ const GoldenGateNode: React.FC<NodeProps<GoldenGateNodeData>> = ({ id, data }) =
 
     // Check if parts changed
     if (JSON.stringify(currentParts) !== JSON.stringify(data.parts)) {
-      setIsPulse(true);
-      setTimeout(() => setIsPulse(false), 600);
+      if (containerRef.current) {
+        containerRef.current.classList.add(styles.pulse);
+        setTimeout(() => containerRef.current && containerRef.current.classList.remove(styles.pulse), 600);
+      }
 
       setNodes(nds => nds.map(node => {
         if (node.id === id) {
@@ -61,12 +63,12 @@ const GoldenGateNode: React.FC<NodeProps<GoldenGateNodeData>> = ({ id, data }) =
   }, [incomingParts, id, setNodes, data.parts]);
 
   const handleChangeEnzyme = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const enzyme = e.target.value as any;
+    const enzyme = e.target.value as GoldenGateNodeData['enzyme'];
     setNodes(nds => nds.map(n => n.id === id ? { ...n, data: { ...n.data, enzyme } } : n));
   };
 
   return (
-    <div className={`${styles.container} ${data.error ? styles.error : ''} ${isPulse ? styles.pulse : ''}`} style={{ borderColor: '#fdcb6e', minWidth: '200px' }}>
+    <div ref={containerRef} className={`${styles.container} ${data.error ? styles.error : ''}`} style={{ borderColor: '#fdcb6e', minWidth: '200px' }}>
       <Handle type="target" position={Position.Left} className={styles.handle} style={{ background: '#fdcb6e' }} />
 
       <div className={styles.header} style={{ background: '#ffeaa7', color: '#d35400' }}>

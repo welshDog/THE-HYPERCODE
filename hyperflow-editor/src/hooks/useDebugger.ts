@@ -3,7 +3,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 export type DebugEvent = 
   | { type: 'node_active'; nodeId: string }
   | { type: 'log'; nodeId: string; message: string }
-  | { type: 'node_complete'; nodeId: string; result: any }
+  | { type: 'node_complete'; nodeId: string; result: unknown }
   | { type: 'execution_complete' }
   | { type: 'error'; message: string };
 
@@ -13,7 +13,7 @@ export function useDebugger() {
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
   const [completedNodes, setCompletedNodes] = useState<Set<string>>(new Set());
   const [logs, setLogs] = useState<string[]>([]);
-  const [results, setResults] = useState<Record<string, any>>({});
+  const [results, setResults] = useState<Record<string, unknown>>({});
   
   const socketRef = useRef<WebSocket | null>(null);
 
@@ -73,7 +73,7 @@ export function useDebugger() {
     };
   }, []);
 
-  const startDebug = useCallback((flowData: any) => {
+  const startDebug = useCallback((flowData: unknown) => {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       setIsRunning(true);
       setLogs(['🚀 Starting Flow State Guardian...']);

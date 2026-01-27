@@ -9,7 +9,7 @@ export interface QiskitNodeData {
 }
 
 // Helper to clean up the code generation
-export function generateQiskitCode(nodes: any[], _connections: any[]): string {
+export function generateQiskitCode(nodes: { position: { x: number }; data: QiskitNodeData }[]): string {
     // 1. Identify Qubits (count them)
     // For V0, we scan nodes to find the max qubit index involved
     let maxQubit = -1;

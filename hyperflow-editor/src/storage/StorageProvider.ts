@@ -12,9 +12,11 @@ export interface FlowMetadata {
   tags?: string[];
 }
 
+import type { Node, Edge } from 'reactflow';
+
 export interface SavedFlow extends FlowMetadata {
-  nodes: any[]; // React Flow nodes
-  edges: any[]; // React Flow edges
+  nodes: Node[];
+  edges: Edge[];
   viewport?: { x: number; y: number; zoom: number };
 }
 

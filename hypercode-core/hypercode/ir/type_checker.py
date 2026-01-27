@@ -4,7 +4,7 @@ HyperCode Type Checker
 Validates types throughout the AST and IR.
 """
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass
 from .types import *
 from hypercode.ast.nodes import *
@@ -66,7 +66,7 @@ class GateArityError(HyperCodeError):
 class TypeChecker:
     """Main type checking class"""
     
-    def __init__(self):
+    def __init__(self) -> None:
         self.symbols: Dict[str, BaseType] = {}
         self.errors: List[HyperCodeError] = []
         self.warnings: List[str] = []
@@ -75,13 +75,23 @@ class TypeChecker:
     # MAIN CHECKING METHODS
     # ========================================================================
     
-    def check_program(self, program: 'QuantumCircuitDecl') -> List[HyperCodeError]:
+    def check_program(self, program: Union[Program, QuantumCircuitDecl]) -> List[HyperCodeError]:
         """Check entire program"""
         self.symbols = {}
         self.errors = []
         
+        # Determine statements to check
+        statements: List[Statement] = []
+        if hasattr(program, 'statements'): # Program
+            statements = program.statements
+        elif hasattr(program, 'body'): # QuantumCircuitDecl
+            statements = program.body
+        else:
+            # Fallback or error
+            return []
+
         # Check all statements
-        for stmt in program.body:
+        for stmt in statements:
             self.check_statement(stmt)
         
         return self.errors
@@ -97,6 +107,10 @@ class TypeChecker:
             self.check_gate_statement(stmt)
         elif isinstance(stmt, QMeasure):
             self.check_measure_statement(stmt)
+        elif isinstance(stmt, QuantumCircuitDecl):
+            # Recurse into circuit body
+            for inner in stmt.body:
+                self.check_statement(inner)
     
     # ========================================================================
     # VARIABLE CHECKING

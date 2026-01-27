@@ -1,5 +1,4 @@
 import { type Node, type Edge } from 'reactflow';
-import { type QiskitNodeData } from './engine/QiskitExporter';
 import { type EnzymeNodeData, type LigaseNodeData, type SequenceNodeData, type TranscribeNodeData, type TranslateNodeData, type PCRNodeData, type CRISPRNodeData, type GoldenGateNodeData } from './engine/BioTypes';
 
 export interface Preset {

@@ -77,7 +77,16 @@ export class SupabaseStorageProvider implements IStorageProvider {
       throw new Error(`Failed to list flows: ${error.message}`);
     }
 
-    return (data || []).map((row: any) => ({
+    interface FlowRow {
+      id: string;
+      name: string;
+      description?: string;
+      created_at: string;
+      updated_at: string;
+      tags?: string[];
+    }
+
+    return (data || []).map((row: FlowRow) => ({
       id: row.id,
       name: row.name,
       description: row.description,
@@ -110,8 +119,9 @@ export class SupabaseStorageProvider implements IStorageProvider {
         throw new Error('Invalid flow file: missing nodes or edges');
       }
       return flow as SavedFlow;
-    } catch (e) {
-      throw new Error('Invalid JSON string');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`Invalid JSON string: ${msg}`);
     }
   }
 }
