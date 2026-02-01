@@ -1,5 +1,22 @@
 # 🛠️ HYPERCODE DEVELOPMENT GUIDE
 
+## 📂 Code Surfaces & Architecture
+
+When working on HyperCode, understand where your task fits:
+
+1.  **Language Core (`hypercode-core/`)**:
+    -   The brain. Parser, AST, IR, Simulator.
+    -   *Key Files*: `simulator.py`, `parser.py`, `backends/`.
+2.  **Visual Editor (`hyperflow-editor/`)**:
+    -   The face. React, Vite, React Flow.
+    -   *Key Files*: `CompilerPanel.tsx`, `App.tsx`, `components/nodes/`.
+3.  **Interpreter (`interpreter/` + `syntax/`)**:
+    -   The nervous system. Execution logic.
+4.  **Tests (`tests/`)**:
+    -   The immune system. `pytest` for backend, `vitest` for frontend.
+
+---
+
 ## Phase 2 Implementation Roadmap
 
 ### Setup

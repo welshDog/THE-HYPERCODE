@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "threshold_percent": 5,
+  "project": "hyperflow-editor",
+  "baseline_total_bytes": 0
+}

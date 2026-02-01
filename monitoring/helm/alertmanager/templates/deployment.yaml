@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alertmanager
+  template:
+    metadata:
+      labels:
+        app: alertmanager
+    spec:
+      containers:
+        - name: alertmanager
+          image: prom/alertmanager:v0.27.0
+          args:
+            - "--config.file=/etc/alertmanager/config.yml"
+          ports:
+            - containerPort: 9093
+          resources:
+            limits: {{ .Values.resources.limits | toYaml | nindent 12 }}
+            requests: {{ .Values.resources.requests | toYaml | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/alertmanager
+            - name: tls
+              mountPath: /etc/tls
+      volumes:
+        - name: config
+          secret:
+            secretName: {{ .Values.configSecretName }}
+        - name: tls
+          secret:
+            secretName: {{ .Values.tlsSecretName }}

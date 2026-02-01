@@ -1,0 +1,7 @@
+{
+  "title": "System Health",
+  "panels": [
+    {"type": "graph", "title": "CPU", "targets": [{"expr": "process_cpu_seconds_total"}]},
+    {"type": "graph", "title": "Memory", "targets": [{"expr": "process_resident_memory_bytes"}]}
+  ]
+}

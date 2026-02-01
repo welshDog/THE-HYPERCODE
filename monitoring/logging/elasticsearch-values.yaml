@@ -1,0 +1,10 @@
+master:
+  replicaCount: 3
+data:
+  persistence:
+    enabled: true
+    size: 100Gi
+coordinating:
+  replicaCount: 2
+kibana:
+  enabled: true

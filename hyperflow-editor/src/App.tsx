@@ -1,16 +1,6 @@
 import { useCallback, useState, useEffect } from 'react';
-import ReactFlow, {
-  Background,
-  Controls,
-  useNodesState,
-  useEdgesState,
-  type Connection as RFConnection,
-  addEdge,
-  type NodeTypes,
-  type EdgeTypes,
-  Panel,
-  type ReactFlowInstance,
-} from 'reactflow';
+import ReactFlow, { Background, Controls, type NodeTypes, type EdgeTypes, Panel, type ReactFlowInstance } from 'reactflow';
+import HyperflowCanvas from './components/HyperflowCanvas';
 
 import HexNode from './nodes/HexNode';
 import SequenceNode from './nodes/SequenceNode';
@@ -62,9 +52,6 @@ const edgeTypes: EdgeTypes = {
 
 // --- Main Component ---
 function App() {
-  // React Flow State
-  const [nodes, setNodes, onNodesChange] = useNodesState(CENTRAL_DOGMA_PRESET.nodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(CENTRAL_DOGMA_PRESET.edges);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
 
   // Focus Flow State
@@ -147,23 +134,17 @@ function App() {
     return new MockCloudStorageProvider();
   });
 
-  // Initial Load from Cloud
   useEffect(() => {
     const loadFromCloud = async () => {
       try {
         const saved = await storageProvider.load('current-flow');
-        if (saved) {
-          setNodes(saved.nodes);
-          setEdges(saved.edges);
-          if (saved.viewport) setZoomLevel(saved.viewport.zoom);
-          console.log('Restored flow from cloud');
-        }
+        if (saved?.viewport) setZoomLevel(saved.viewport.zoom);
       } catch (e) {
         console.warn('No cloud save found or load failed', e);
       }
     };
     loadFromCloud();
-  }, [storageProvider, setNodes, setEdges]);
+  }, [storageProvider]);
 
   // Auto-Save Effect
   useEffect(() => {
@@ -398,7 +379,7 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleSaveFile, rfInstance, loadPreset]);
 
-  const onConnect = useCallback((params: RFConnection) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
+  const onConnect = useCallback((_params: unknown) => {}, []);
 
   // Focus Flow Logic
   const handleMove = useCallback((_e: unknown, viewport: { zoom: number }) => {
@@ -551,22 +532,8 @@ function App() {
 
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#2d3436' }} className={containerClass}>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onMove={handleMove}
-        onSelectionChange={handleSelectionChange}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        onInit={setRfInstance}
-        fitView
-      >
-        <Background color="#b2bec3" gap={20} />
-        <Controls />
-        <Panel position="top-right">
+      <HyperflowCanvas initialNodes={CENTRAL_DOGMA_PRESET.nodes} initialEdges={CENTRAL_DOGMA_PRESET.edges} onChange={() => {}} />
+      <Panel position="top-right">
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             {/* Sync Status Indicator */}
             <div style={{

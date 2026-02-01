@@ -1,0 +1,7 @@
+{
+  "title": "Business KPI",
+  "panels": [
+    {"type": "graph", "title": "Req per endpoint", "targets": [{"expr": "sum by (path) (rate(http_requests_total[1m]))"}]},
+    {"type": "graph", "title": "Status codes", "targets": [{"expr": "sum by (status) (rate(http_requests_total[1m]))"}]}
+  ]
+}

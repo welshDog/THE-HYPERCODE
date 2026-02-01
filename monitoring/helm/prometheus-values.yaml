@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 15s
+server:
+  retention: 7d
+  persistentVolume:
+    enabled: true
+    size: 10Gi
+alertmanager:
+  enabled: true
+  persistentVolume:
+    enabled: true
+    size: 5Gi
+extraScrapeConfigs:
+  - job_name: hypercode
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["hypercode-core.hypercode.svc.cluster.local:80"]

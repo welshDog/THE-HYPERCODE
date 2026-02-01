@@ -1,5 +1,9 @@
 # THE HYPERCODE Monorepo
 
+[![CI](https://github.com/welshDog/THE-HYPERCODE/actions/workflows/ci.yml/badge.svg)](https://github.com/welshDog/THE-HYPERCODE/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/welshDog/THE-HYPERCODE/branch/main/graph/badge.svg)](https://codecov.io/gh/welshDog/THE-HYPERCODE)
+[![Python](https://img.shields.io/badge/python-3.10-blue)](https://www.python.org/downloads/release/python-3100/)
+
 Welcome to the HyperCode project monorepo.
 
 ## Structure
@@ -72,3 +76,5 @@ cd hypercode-core
 # Setup virtual environment if needed
 pip install -e .
 ```
+
+Supported Python version: 3.10. CI enforces Python 3.10 for builds and tests.

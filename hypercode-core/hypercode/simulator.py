@@ -44,14 +44,14 @@ def simulate_flow(flow_data: Dict[str, Any]) -> Dict[str, Any]:
     connections = {edge["target"]: edge["source"] for edge in edges}
 
     # Helper to get upstream data
-    def get_upstream_data(node_id):
+    def get_upstream_data(node_id: str) -> Any:
         source_id = connections.get(node_id)
         if source_id and source_id in results:
             return results[source_id]
         return None
 
     # Helper to get ALL upstream data (for multi-input nodes)
-    def get_all_upstream_data(node_id):
+    def get_all_upstream_data(node_id: str) -> list[Any]:
         source_ids = [e["source"] for e in edges if e["target"] == node_id]
         # Sort by some logic? For now, we trust the order in edges list, but maybe we should rely on Y position if available
         # But we don't have Y pos here easily unless we look up node.
@@ -193,35 +193,77 @@ def simulate_flow(flow_data: Dict[str, Any]) -> Dict[str, Any]:
                     enzyme = ENZYME_DB.get(enzyme_name)
                     if not enzyme:
                         log.append(f"ERROR: Enzyme {enzyme_name} not supported.")
-                        results[node["id"]] = {"log": log, "efficiency": "0%", "assemblyResult": "", "type": "error"}
+                        results[node["id"]] = {"log": log, "efficiency": "0%", "type": "error", "sequence": "", "parts": [], "isCircular": False}
                         processed.add(node["id"])
                         progress = True
                         continue
 
-                    # Mock Assembly Logic
-                    # Concatenate all sequences
-                    assembled_seq = ""
+                    site = enzyme["site"]
+                    rev_site = enzyme["rev_site"]
+                    spacer = enzyme["spacer_len"]
+                    overhang_len = enzyme["overhang_len"]
+
+                    parts = []
+
+                    def extract_part(seq: str, label: str, site: str, rev_site: str, spacer: int, overhang_len: int, enzyme_name: str, log: list[str]) -> Dict[str, Any]:
+                        s = seq.upper()
+                        start_site = s.find(site)
+                        end_site = s.rfind(rev_site)
+                        if start_site == -1 and end_site == -1:
+                            log.append(f"No valid {enzyme_name} site found in {label}")
+                            return {"label": label, "seq": s, "left": "", "right": ""}
+                        if start_site == -1 or end_site == -1 or end_site <= start_site:
+                            log.append(f"MISMATCH or incomplete sites in {label}")
+                            return {"label": label, "seq": s, "left": "", "right": ""}
+                        cut_left = start_site + len(site) + spacer
+                        payload_end = end_site - spacer
+                        payload = s[cut_left:payload_end]
+                        left_ov = s[cut_left:cut_left+overhang_len]
+                        right_ov = payload[-overhang_len:] if len(payload) >= overhang_len else ""
+                        log.append(f"Valid {enzyme_name} site found in {label}. Overhangs: {left_ov} ... {right_ov}")
+                        log.append(f"Extracted {len(payload)}bp payload from {label}")
+                        return {"label": label, "seq": payload, "left": left_ov, "right": right_ov}
+
                     for inp in inputs:
-                        if inp.get("sequence"):
-                            assembled_seq += inp["sequence"]
-                    
-                    log.append(f"Assembled {len(inputs)} fragments. Total length: {len(assembled_seq)} bp.")
-                    
+                        label = inp.get("label", "part")
+                        seq = inp.get("sequence", "")
+                        parts.append(extract_part(seq, label, site, rev_site, spacer, overhang_len, enzyme_name, log))
+
+                    assembled = ""
+                    is_circular = False
+                    for i, p in enumerate(parts):
+                        assembled += p["seq"]
+                        if i < len(parts) - 1:
+                            nxt = parts[i+1]
+                            if p["right"] and nxt["left"] and p["right"] == nxt["left"]:
+                                log.append(f"Ligation: Part {i+1} ({p['right']}) matches Part {i+2} ({nxt['left']}). Joining.")
+                            else:
+                                log.append("MISMATCH: overhangs do not align. Inserting gap.")
+                                assembled += "-[GAP]-"
+
+                    if parts:
+                        first = parts[0]
+                        last = parts[-1]
+                        if first["left"] and last["right"] and first["left"] == last["right"]:
+                            is_circular = True
+                            log.append("Plasmid closed")
+
                     results[node["id"]] = {
                         "type": "assembled_dna",
-                        "sequence": assembled_seq,
-                        "length": len(assembled_seq),
+                        "sequence": assembled,
+                        "length": len(assembled),
                         "efficiency": "85%",
-                        "log": log
+                        "log": log,
+                        "parts": parts,
+                        "isCircular": is_circular
                     }
                     processed.add(node["id"])
                     progress = True
             
             # 5. Quantum Nodes (Stub for Mixed Mode)
             elif node_type in ["h", "x", "z", "cx", "measure"]:
-                 # Just mark processed
-                 processed.add(node["id"])
-                 progress = True
+                processed.add(node["id"])
+                progress = True
 
         if not progress:
             break
@@ -271,13 +313,13 @@ def simulate_flow_generator(flow_data: Dict[str, Any]) -> Generator[Dict[str, An
     # Map connections for easy lookup
     connections = {edge["target"]: edge["source"] for edge in edges}
 
-    def get_upstream_data(node_id):
+    def get_upstream_data(node_id: str) -> Any:
         source_id = connections.get(node_id)
         if source_id and source_id in results:
             return results[source_id]
         return None
 
-    def get_all_upstream_data(node_id):
+    def get_all_upstream_data(node_id: str) -> list[Any]:
         source_ids = [e["source"] for e in edges if e["target"] == node_id]
         data_list = []
         for sid in source_ids:
@@ -344,10 +386,10 @@ def simulate_flow_generator(flow_data: Dict[str, Any]) -> Generator[Dict[str, An
                         start = template.find(fwd) if fwd else 0
                         end = template.rfind(rev) if rev else len(template)
                         if start != -1 and end != -1 and end > start:
-                             amplicon = template[start : end + len(rev)]
-                             log.append("Amplified.")
+                            amplicon = template[start : end + len(rev)]
+                            log.append("Amplified.")
                         else:
-                             log.append("PCR Failed.")
+                            log.append("PCR Failed.")
                     
                     result_data = {
                         "type": "amplicon",
@@ -369,10 +411,9 @@ def simulate_flow_generator(flow_data: Dict[str, Any]) -> Generator[Dict[str, An
                     }
             
             elif node_type == "goldengate":
-                 # Simple stub
-                 inputs = get_all_upstream_data(node["id"])
-                 assembled_seq = "".join([i.get("sequence", "") for i in inputs])
-                 result_data = {"type": "assembled_dna", "sequence": assembled_seq, "log": ["Assembled"]}
+                inputs = get_all_upstream_data(node["id"])
+                assembled_seq = "".join([i.get("sequence", "") for i in inputs])
+                result_data = {"type": "assembled_dna", "sequence": assembled_seq, "log": ["Assembled"]}
 
             # Save result
             results[node["id"]] = result_data

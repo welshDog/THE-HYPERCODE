@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id        String  @id @default(uuid())
+  ownerId   String
+  name      String
+  flows     Flow[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Flow {
+  id        String   @id @default(uuid())
+  project   Project  @relation(fields: [projectId], references: [id])
+  projectId String
+  name      String
+  data      Json
+  hash      String   @unique
+  runs      FlowRun[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FlowRun {
+  id             String  @id @default(uuid())
+  flow           Flow    @relation(fields: [flowId], references: [id])
+  flowId         String
+  status         String
+  domain         String
+  idempotencyKey String?
+  code           String?
+  error          Json?
+  simulation     SimulationResult?
+  createdAt      DateTime @default(now())
+  finishedAt     DateTime?
+
+  @@index([flowId])
+  @@index([idempotencyKey])
+}
+
+model SimulationResult {
+  id     String  @id @default(uuid())
+  run    FlowRun @relation(fields: [runId], references: [id])
+  runId  String  @unique
+  payload Json
+  createdAt DateTime @default(now())
+}

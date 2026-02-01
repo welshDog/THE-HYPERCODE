@@ -7,16 +7,16 @@ including quantum circuit execution and classical program evaluation.
 
 from typing import Dict, Any, Optional, Union, List
 
-from hypercode.ast.nodes import (
+from ..ast.nodes import (
     Program, Statement, DataDecl, SetStmt, PrintStmt, CheckStmt, Block,
     Expr, Literal, Variable, BinaryOp,
     QuantumCircuitDecl, Directive, QRegDecl, QGate, QMeasure,
     CrisprEdit, PcrReaction, QuantumCrispr
 )
-from hypercode.ir.lower_quantum import lower_circuit
-from hypercode.ir.qir_nodes import QModule, QIR
-from hypercode.backends import get_backend, Backend
-from hypercode.backends.molecular_backend import MolecularBackend
+from ..ir.lower_quantum import lower_circuit
+from ..ir.qir_nodes import QModule, QIR
+from ..backends import get_backend, Backend
+from ..backends.molecular_backend import MolecularBackend
 
 
 def run_qiskit(module: Union[QModule, QIR], shots: int = 1024, seed: Optional[int] = None) -> Dict[str, int]:
@@ -34,7 +34,7 @@ def run_qiskit(module: Union[QModule, QIR], shots: int = 1024, seed: Optional[in
     Returns:
         Dictionary mapping measurement targets to counts
     """
-    from hypercode.backends.qiskit_backend import QiskitBackend
+    from ..backends.qiskit_backend import QiskitBackend
     
     # If we get a QIR object, use its first module
     if isinstance(module, QIR):
@@ -84,8 +84,9 @@ class Evaluator:
         if backend_name != "classical":
             try:
                 b = get_backend(backend_name)
-                if isinstance(b, Backend):
-                    self.backend = b
+                # Duck-typing: accept any object with an execute method as a backend (supports tests with mocks)
+                if hasattr(b, "execute"):
+                    self.backend = b  
                 elif isinstance(b, MolecularBackend):
                     self.molecular_backend = b
             except ValueError as e:
@@ -105,8 +106,8 @@ class Evaluator:
         """
         try:
             # Pre-process: Group top-level quantum statements into an implicit circuit
-            statements = []
-            quantum_buffer = []
+            statements: List[Statement] = []
+            quantum_buffer: List[Statement] = []
             
             for stmt in node.statements:
                 if isinstance(stmt, (QRegDecl, QGate, QMeasure)):
@@ -119,7 +120,7 @@ class Evaluator:
                     statements.append(stmt)
             
             if quantum_buffer:
-                 statements.append(QuantumCircuitDecl(name="main", body=quantum_buffer))
+                statements.append(QuantumCircuitDecl(name="main", body=quantum_buffer))
 
             for stmt in statements:
                 self.execute(stmt)
@@ -190,8 +191,8 @@ class Evaluator:
                     self.variables[k] = v
 
             elif isinstance(stmt, QuantumCrispr):
-                from hypercode.hybrid.crispr_optimizer import optimize_guides
-                from hypercode.backends.crispr_engine import find_pam_sites, extract_grna
+                from ..hybrid.crispr_optimizer import optimize_guides
+                from ..backends.crispr_engine import find_pam_sites, extract_grna
                 import os
 
                 # 1. Get Target Sequence
@@ -205,7 +206,7 @@ class Evaluator:
                 if genome_input in self.variables:
                     genome_seq = self.variables[genome_input]
                 elif os.path.exists(genome_input):
-                    with open(genome_input, 'r') as f:
+                    with open(genome_input, 'r', encoding='utf-8') as f:
                         raw = f.read()
                         # Simple FASTA parsing
                         if raw.startswith('>'):
@@ -217,7 +218,7 @@ class Evaluator:
                 # 3. Extract Candidates from Target
                 pam_sites = find_pam_sites(target_seq)
                 candidates = []
-                for pam_start, pam_seq in pam_sites:
+                for pam_start, _ in pam_sites:
                     grna = extract_grna(target_seq, pam_start)
                     if len(grna) == 20:
                         candidates.append(grna)

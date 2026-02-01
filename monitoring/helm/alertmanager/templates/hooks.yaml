@@ -1,0 +1,21 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: alertmanager-preinstall
+  annotations:
+    "helm.sh/hook": pre-install
+spec:
+  template:
+    spec:
+      containers:
+        - name: validate
+          image: alpine:3.19
+          command: ["/bin/sh","-c","test -n \"$(cat /etc/alertmanager/config.yml)\" "]
+          volumeMounts:
+            - name: config
+              mountPath: /etc/alertmanager
+      restartPolicy: Never
+      volumes:
+        - name: config
+          secret:
+            secretName: {{ .Values.configSecretName }}

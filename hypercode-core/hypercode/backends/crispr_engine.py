@@ -1,6 +1,6 @@
 
 import re
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple
 from hypercode.backends.bio_utils import calculate_tm
 
 class CRISPRResult:
@@ -91,7 +91,7 @@ def scan_genome_for_off_targets(guide_seq: str, genome_seq: str, max_mismatches:
         mismatches = calculate_mismatch_score(guide_seq, subseq)
         
         if mismatches <= max_mismatches and mismatches > 0:
-             off_targets.append((i, mismatches, subseq))
+            off_targets.append((i, mismatches, subseq))
              
     return off_targets
 
@@ -125,10 +125,12 @@ def simulate_cut(dna_sequence: str, grna_sequence: str, pam_pattern: str = "NGG"
     # 1. Find ALL gRNA matches
     start_search = 0
     
+    found_target = False
     while True:
         match_index = dna.find(grna, start_search)
         if match_index == -1:
             break
+        found_target = True
             
         # Candidate found, check PAM
         pam_start = match_index + len(grna)
@@ -160,7 +162,12 @@ def simulate_cut(dna_sequence: str, grna_sequence: str, pam_pattern: str = "NGG"
                     cut_site=cut_site,
                     tm=tm
                 )
+            else:
+                log.append(f"failed PAM check at index {match_index}")
         
         start_search = match_index + 1
 
-    return CRISPRResult(success=False, log=["CRISPR failed: No matching target/PAM found."])
+    if not found_target:
+        return CRISPRResult(success=False, log=["Target not found"])
+    log.append("No valid target+PAM sites found")
+    return CRISPRResult(success=False, log=log)

@@ -1,0 +1,21 @@
+persistence:
+  enabled: true
+  size: 10Gi
+ingress:
+  enabled: false
+rbac:
+  create: true
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: default
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards
+dashboardsConfigMaps:
+  default: hypercode-dashboards

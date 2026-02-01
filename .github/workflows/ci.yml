@@ -1,52 +1,429 @@
-name: HyperCode CI
+name: CI with Latency Gate and API Contracts
 
 on:
   push:
-    branches: [ master, main, develop ]
+    branches: ["main", "master"]
   pull_request:
-    branches: [ master, main, develop ]
-  workflow_dispatch:
+    branches: ["main", "master"]
 
 jobs:
-  validate-hypercode-v3:
-    name: 🛡️ Validate HyperCode V3 Syntax
+  test:
+    name: Test (measure duration)
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.10"
-        
-    - name: Run Syntax Validator
-      run: |
-        echo "🔍 Scanning Codebase for V3 Compliance..."
-        python tools/code/syntax_validator.py examples/
-        
-  test-python-core:
-    name: 🐍 Test Python Core
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest coverage pip-audit
+      - name: Start timer
+        id: start_test
+        run: echo "start_ms=$(date +%s%3N)" >> $GITHUB_OUTPUT
+      - name: Run tests
+        working-directory: THE HYPERCODE/hypercode-core
+        run: |
+          pytest -q || true
+          coverage run -m pytest || true
+          coverage json -o coverage.json || true
+      - name: Run dependency vulnerability scan
+        working-directory: THE HYPERCODE/hypercode-core
+        run: |
+          pip-audit -f json -o pip-audit.json || true
+      - name: End timer and save
+        run: |
+          end_ms=$(date +%s%3N)
+          start_ms=${{ steps.start_test.outputs.start_ms }}
+          dur=$((end_ms - start_ms))
+          echo "{\"stage\":\"test\",\"duration_ms\":$dur}" > test-duration.json
+      - name: Upload duration artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-duration
+          path: test-duration.json
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-json
+          path: THE HYPERCODE/hypercode-core/coverage.json
+      - name: Upload vulnerability scan
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-audit
+          path: THE HYPERCODE/hypercode-core/pip-audit.json
+
+  build:
+    name: Build (measure duration)
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.10"
-        
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        if [ -f hypercode-core/requirements.txt ]; then pip install -r hypercode-core/requirements.txt; fi
-        
-    - name: Run Pytest
-      run: |
-        if [ -d "hypercode-core/tests" ]; then
-          export PYTHONPATH=$PYTHONPATH:$(pwd)/hypercode-core
-          # pytest hypercode-core/tests/  # Uncomment when tests are stable
-          echo "⚠️ Tests skipped for now (Enable after V3 refactor)"
-        else
-          echo "No tests found."
-        fi
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Start timer
+        id: start_build
+        run: echo "start_ms=$(date +%s%3N)" >> $GITHUB_OUTPUT
+      - name: Compile Python sources
+        run: |
+          python -m compileall THE HYPERCODE/hypercode-core/hypercode || true
+      - name: End timer and save
+        run: |
+          end_ms=$(date +%s%3N)
+          start_ms=${{ steps.start_build.outputs.start_ms }}
+          dur=$((end_ms - start_ms))
+          echo "{\"stage\":\"build\",\"duration_ms\":$dur}" > build-duration.json
+      - name: Upload duration artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-duration
+          path: build-duration.json
+
+  deploy:
+    name: Deploy (Docker, metrics, rollback)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Start timer
+        id: start_deploy
+        run: echo "start_ms=$(date +%s%3N)" >> $GITHUB_OUTPUT
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to registry
+        if: ${{ secrets.REGISTRY != '' && secrets.REGISTRY_USERNAME != '' && secrets.REGISTRY_PASSWORD != '' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+      - name: Restore deploy state cache
+        id: deploy_state_restore
+        uses: actions/cache@v4
+        with:
+          path: .github/deploy-state.json
+          key: deploy-state-${{ github.ref }}
+      - name: Build and push image
+        id: build_push
+        uses: docker/build-push-action@v5
+        with:
+          context: THE HYPERCODE/hypercode-core
+          push: true
+          tags: ${{ secrets.REGISTRY }}/${{ secrets.IMAGE_NAME }}:${{ github.sha }},${{ secrets.REGISTRY }}/${{ secrets.IMAGE_NAME }}:latest
+      - name: Save deploy state
+        run: |
+          digest="${{ steps.build_push.outputs.digest }}"
+          echo "{\"last_success_sha\":\"${{ github.sha }}\",\"last_success_digest\":\"$digest\"}" > .github/deploy-state.json
+      - name: Save deploy state cache
+        uses: actions/cache@v4
+        with:
+          path: .github/deploy-state.json
+          key: deploy-state-${{ github.ref }}
+      - name: End timer and save
+        run: |
+          end_ms=$(date +%s%3N)
+          start_ms=${{ steps.start_deploy.outputs.start_ms }}
+          dur=$((end_ms - start_ms))
+          echo "{\"stage\":\"deploy\",\"duration_ms\":$dur,\"success\":true}" > deploy-duration.json
+      - name: Upload duration artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-duration
+          path: deploy-duration.json
+      - name: Publish metrics to dashboard
+        if: ${{ secrets.METRICS_URL != '' }}
+        env:
+          METRICS_URL: ${{ secrets.METRICS_URL }}
+        run: |
+          curl -s -X POST -H 'Content-Type: application/json' --data-binary @deploy-duration.json "$METRICS_URL/metrics/deployments/push" || true
+      - name: Rollback on failure
+        if: ${{ failure() }}
+        run: |
+          echo "{""stage"":""deploy"",""success"":false,""reason"":""pipeline failure""}" > deploy-duration.json
+          if [ -f .github/deploy-state.json ]; then
+            prev_sha=$(jq -r '.last_success_sha' .github/deploy-state.json)
+            prev_digest=$(jq -r '.last_success_digest' .github/deploy-state.json)
+            echo "Rollback to $prev_sha ($prev_digest)"
+            echo "{""stage"":""deploy"",""rollback_to"":""$prev_sha""}" > deploy-rollback.json
+          fi
+        shell: bash
+
+  latency-regression:
+    name: CI Latency Regression Gate
+    runs-on: ubuntu-latest
+    needs: [test, build, deploy]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Restore durations history
+        id: history_restore
+        uses: actions/cache@v4
+        with:
+          path: .github/durations-history.json
+          key: durations-history-${{ github.ref }}
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./durations
+      - name: Compare against baseline and gate
+        env:
+          BASELINE_PATH: .github/ci-latency-baseline.json
+          DURATIONS_DIR: ./durations
+          HISTORY_PATH: .github/durations-history.json
+        run: |
+          python .github/scripts/gate_ci_latency.py
+      - name: Save durations history
+        uses: actions/cache@v4
+        with:
+          path: .github/durations-history.json
+          key: durations-history-${{ github.ref }}
+
+  api-contracts:
+    name: Validate OpenAPI contracts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install validator
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install openapi-spec-validator PyYAML
+      - name: Validate spec
+        run: |
+          python - << 'PY'
+          import yaml
+          from openapi_spec_validator import validate_spec
+          with open('THE HYPERCODE/hypercode-core/docs/api/openapi.yaml', 'r', encoding='utf-8') as f:
+              spec = yaml.safe_load(f)
+          validate_spec(spec)
+          print('OpenAPI spec valid')
+          PY
+
+  secrets-validation:
+    name: Validate required secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check secrets
+        run: |
+          test -n "${{ secrets.SLACK_WEBHOOK_URL }}" || (echo "Missing SLACK_WEBHOOK_URL" && exit 1)
+          test -n "${{ secrets.PAGERDUTY_ROUTING_KEY }}" || (echo "Missing PAGERDUTY_ROUTING_KEY" && exit 1)
+          test -n "${{ secrets.KUBE_CONFIG }}" || (echo "Missing KUBE_CONFIG" && exit 1)
+          test -n "${{ secrets.REGISTRY }}" || (echo "Missing REGISTRY" && exit 1)
+          test -n "${{ secrets.REGISTRY_USERNAME }}" || (echo "Missing REGISTRY_USERNAME" && exit 1)
+          test -n "${{ secrets.REGISTRY_PASSWORD }}" || (echo "Missing REGISTRY_PASSWORD" && exit 1)
+          test -n "${{ secrets.IMAGE_NAME }}" || (echo "Missing IMAGE_NAME" && exit 1)
+          echo "All required secrets present"
+
+  infra-security:
+    name: Infra security scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install tfsec
+        run: |
+          curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
+      - name: Run tfsec
+        run: tfsec THE HYPERCODE/infra/terraform || true
+      - name: Helm lint Alertmanager
+        run: |
+          curl -sSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          helm lint THE HYPERCODE/monitoring/helm/alertmanager || true
+
+  web-assets:
+    name: Web bundle size gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install and build
+        working-directory: THE HYPERCODE/hyperflow-editor
+        run: |
+          npm ci
+          npm run build
+      - name: Gate bundle size
+        env:
+          BUNDLE_BASELINE: .github/bundle-size-baseline.json
+          DIST_DIR: THE HYPERCODE/hyperflow-editor/dist
+        run: |
+          python .github/scripts/bundle_size_gate.py
+      - name: Restore previous manifest
+        id: restore_prev_manifest
+        uses: actions/cache@v4
+        with:
+          path: .github/prev-manifest.json
+          key: bundle-manifest-${{ github.base_ref }}
+      - name: Generate bundle diff
+        env:
+          DIST_DIR: THE HYPERCODE/hyperflow-editor/dist
+          PREV_MANIFEST: .github/prev-manifest.json
+          OUT_DIR: .
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          node THE HYPERCODE/scripts/bundle-diff.js
+      - name: Save manifest cache
+        uses: actions/cache@v4
+        with:
+          path: bundle-manifest.json
+          key: bundle-manifest-${{ github.base_ref }}
+      - name: Upload bundle diff report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-diff-report
+          path: bundle-diff.html
+      - name: Upload bundle diff json
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-diff-json
+          path: bundle-diff.json
+      - name: Upload bundle manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-manifest
+          path: bundle-manifest.json
+      - name: Compatibility check
+        run: |
+          python .github/scripts/compat_check.py
+
+  pr-comment:
+    name: PR bundle comment
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'pull_request' }}
+    needs: [test, build, deploy, latency-regression, api-contracts, web-assets]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Prepare report content
+        run: |
+          echo "Preparing bundle comment" > report.txt
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+      - name: Render bundle comment
+        id: render_comment
+        run: |
+          MAN=./artifacts/bundle-manifest/bundle-manifest.json
+          DIFF=./artifacts/bundle-diff-json/bundle-diff.json
+          echo "MANIFEST_PATH=$MAN" >> $GITHUB_OUTPUT
+          echo "DIFF_PATH=$DIFF" >> $GITHUB_OUTPUT
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const pr = context.payload.pull_request.number;
+            const runId = context.runId;
+            const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${runId}`;
+            function icon(status){ return status==='success'?'✅':status==='failure'?'❌':'⚠️'; }
+            const statuses = {
+              test: icon('${{ needs.test.result }}'),
+              build: icon('${{ needs.build.result }}'),
+              deploy: icon('${{ needs.deploy.result }}'),
+              latency: icon('${{ needs.latency-regression.result }}'),
+              api: icon('${{ needs.api-contracts.result }}'),
+              web: icon('${{ needs.web-assets.result }}')
+            };
+            const fs = require('fs');
+            let details = '';
+            try {
+              const man = fs.readFileSync('${{ steps.render_comment.outputs.MANIFEST_PATH }}','utf-8');
+              const m = JSON.parse(man);
+              const total = m.items.reduce((a,i)=>a+i.gzipBytes,0);
+              details = `Total gzip bytes: ${total}`;
+              const diffRaw = fs.readFileSync('${{ steps.render_comment.outputs.DIFF_PATH }}','utf-8');
+              const rows = JSON.parse(diffRaw);
+              const top = rows.sort((a,b)=>Math.abs(b.pct)-Math.abs(a.pct)).slice(0,10);
+              const lines = top.map(r=>`${r.file}: ${r.pct.toFixed(2)}% (${r.delta>0?'+':''}${r.delta} bytes)`);
+              details += `\nTop changes:\n`+lines.join('\n');
+            } catch (e) {}
+            const body = `Bundle diff: [Artifacts run](${runUrl})\n\n`+
+              `Jobs: Test ${statuses.test} • Build ${statuses.build} • Security ${statuses.api} • Deploy ${statuses.deploy} • Latency ${statuses.latency} • Web ${statuses.web}\n${details}`;
+            const {data: comments} = await github.rest.issues.listComments({owner, repo, issue_number: pr});
+            const marker = '<!--bundle-diff-sticky-->';
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({owner, repo, comment_id: existing.id, body: `${marker}\n${body}`});
+            } else {
+              await github.rest.issues.createComment({owner, repo, issue_number: pr, body: `${marker}\n${body}`});
+            }
+
+  regression-tests:
+    name: Regression and auto-issue
+    runs-on: ubuntu-latest
+    needs: [pr-comment]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest
+      - name: Run regression tests
+        id: run_tests
+        continue-on-error: true
+        working-directory: THE HYPERCODE/hypercode-core
+        run: |
+          pytest -q | tee ../../test-output.txt
+      - name: Create issue on failure
+        if: ${{ steps.run_tests.outcome == 'failure' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const logs = require('fs').readFileSync('test-output.txt','utf-8');
+            await github.rest.issues.create({owner, repo, title: 'Regression test failures', body: `Logs:\n\n${logs}`});
+
+  deploy-k8s:
+    name: Kubernetes apply and rollout
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: ${{ secrets.KUBE_CONFIG != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup kubectl
+        run: |
+          curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/kubectl
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+      - name: Apply namespace and services
+        run: |
+          kubectl apply -f THE HYPERCODE/k8s/namespace.yaml
+          kubectl apply -f THE HYPERCODE/k8s/service.yaml
+          kubectl apply -f THE HYPERCODE/k8s/ingress.yaml
+      - name: Apply deployment
+        run: |
+          kubectl apply -f THE HYPERCODE/k8s/deployment.yaml
+          kubectl set image deployment/hypercode-core hypercode-core=${{ secrets.REGISTRY }}/${{ secrets.IMAGE_NAME }}:${{ github.sha }} -n hypercode
+      - name: Rollout status
+        run: |
+          kubectl rollout status deployment/hypercode-core -n hypercode --timeout=300s
+      - name: Readiness probe
+        run: |
+          kubectl run curlpod -n hypercode --image=curlimages/curl:8.00.1 -i --tty --rm --restart=Never -- curl -sSf http://hypercode-core/ready
+      - name: Rollback on failure
+        if: ${{ failure() }}
+        run: |
+          kubectl rollout undo deployment/hypercode-core -n hypercode

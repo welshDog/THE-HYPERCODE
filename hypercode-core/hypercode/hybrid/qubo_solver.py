@@ -10,18 +10,19 @@ Designed to be API-compatible with D-Wave's Ocean SDK (dimod).
 import math
 import random
 import logging
-import os
-from typing import Dict, Tuple, List, Optional
+from typing import Dict, Tuple, List
+import importlib
 
 # Setup logger
 logger = logging.getLogger("hypercode.hybrid.solver")
 
-# Try to import D-Wave libraries
+DWAVE_AVAILABLE = False
 try:
-    from dwave.system import DWaveSampler, EmbeddingComposite
-    # from dimod import BinaryQuadraticModel, Vartype # Unused
+    dwave_system = importlib.import_module("dwave.system")
+    DWaveSampler = getattr(dwave_system, "DWaveSampler")
+    EmbeddingComposite = getattr(dwave_system, "EmbeddingComposite")
     DWAVE_AVAILABLE = True
-except ImportError:
+except (ImportError, AttributeError):
     DWAVE_AVAILABLE = False
 
 class SimulatedAnnealer:
@@ -30,10 +31,11 @@ class SimulatedAnnealer:
     Acts as a placeholder for a real Quantum Annealer (D-Wave).
     """
     
-    def __init__(self, steps: int = 1000, initial_temp: float = 10.0, alpha: float = 0.95):
+    def __init__(self, steps: int = 5000, initial_temp: float = 10.0, alpha: float = 0.99, restarts: int = 10):
         self.steps = steps
         self.initial_temp = initial_temp
         self.alpha = alpha
+        self.restarts = restarts
         
     def sample_qubo(self, Q: Dict[Tuple[int, int], float]) -> Dict[int, int]:
         """
@@ -48,51 +50,36 @@ class SimulatedAnnealer:
             A dictionary of selected variables {var_index: 0 or 1}
         """
         # 1. Identify all variables
-        variables = set()
+        variables_set: set[int] = set()
         for (i, j) in Q.keys():
-            variables.add(i)
-            variables.add(j)
-        variables = sorted(list(variables))
+            variables_set.add(i)
+            variables_set.add(j)
+        variables: List[int] = sorted(list(variables_set))
         
         if not variables:
             return {}
             
-        # 2. Initialize random state
-        state = {v: random.choice([0, 1]) for v in variables}
-        current_energy = self._calculate_energy(state, Q)
-        best_state = state.copy()
-        best_energy = current_energy
-        
-        # 3. Annealing Loop
-        temp = self.initial_temp
-        
-        for step in range(self.steps):
-            # Pick a variable to flip
-            v = random.choice(variables)
-            
-            # Calculate energy change (delta E)
-            # Flip
-            old_val = state[v]
-            new_val = 1 - old_val
-            state[v] = new_val
-            new_energy = self._calculate_energy(state, Q)
-            
-            delta_E = new_energy - current_energy
-            
-            # Metropolis Criterion
-            if delta_E < 0 or random.random() < math.exp(-delta_E / temp):
-                # Accept change
-                current_energy = new_energy
-                if current_energy < best_energy:
-                    best_energy = current_energy
-                    best_state = state.copy()
-            else:
-                # Reject change (revert)
-                state[v] = old_val
-                
-            # Cool down
-            temp *= self.alpha
-            
+        best_state: Dict[int, int] = {}
+        best_energy: float = float("inf")
+        for _ in range(self.restarts):
+            state: Dict[int, int] = {v: random.choice([0, 1]) for v in variables}
+            current_energy = self._calculate_energy(state, Q)
+            temp = self.initial_temp
+            for _ in range(self.steps):
+                v: int = random.choice(variables)
+                old_val = state[v]
+                new_val = 1 - old_val
+                state[v] = new_val
+                new_energy = self._calculate_energy(state, Q)
+                delta_E = new_energy - current_energy
+                if delta_E < 0 or random.random() < math.exp(-delta_E / temp):
+                    current_energy = new_energy
+                    if current_energy < best_energy:
+                        best_energy = current_energy
+                        best_state = state.copy()
+                else:
+                    state[v] = old_val
+                temp *= self.alpha
         return best_state
         
     def _calculate_energy(self, state: Dict[int, int], Q: Dict[Tuple[int, int], float]) -> float:
@@ -126,8 +113,8 @@ class QuboSolver:
         if self.use_quantum and DWAVE_AVAILABLE:
             try:
                 return self._solve_quantum(Q)
-            except Exception as e:
-                logger.warning(f"D-Wave solve failed: {e}. Falling back to simulation.")
+            except RuntimeError as e:
+                logger.warning("D-Wave solve failed: %s. Falling back to simulation.", e)
                 return self._solve_classical(Q)
         else:
             if self.use_quantum and not DWAVE_AVAILABLE:

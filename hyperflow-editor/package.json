@@ -17,6 +17,7 @@
     "react-dom": "^19.2.0",
     "react-syntax-highlighter": "^16.1.0",
     "reactflow": "^11.11.4",
+    "zustand": "^5.0.0",
     "rete": "^2.0.6",
     "rete-area-plugin": "^2.1.5",
     "rete-connection-plugin": "^2.0.5",

@@ -1,0 +1,15 @@
+loki:
+  persistence:
+    enabled: true
+    size: 20Gi
+promtail:
+  enabled: true
+  config:
+    clients:
+      - url: http://loki:3100/loki/api/v1/push
+    snippets:
+      pipelineStages:
+        - json
+        - labels:
+            job: alertmanager
+            severity: level

@@ -1,0 +1,8 @@
+{
+  "title": "RED Metrics",
+  "panels": [
+    {"type": "graph", "title": "Rate", "targets": [{"expr": "sum(rate(http_requests_total[1m]))"}]},
+    {"type": "graph", "title": "Errors", "targets": [{"expr": "sum(rate(http_errors_total[1m]))"}]},
+    {"type": "graph", "title": "Duration p95", "targets": [{"expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))"}]}
+  ]
+}

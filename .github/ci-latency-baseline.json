@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "threshold_percent": 5,
+  "stages": {
+    "test": { "baseline_ms": 90000 },
+    "build": { "baseline_ms": 120000 },
+    "deploy": { "baseline_ms": 60000 }
+  }
+}

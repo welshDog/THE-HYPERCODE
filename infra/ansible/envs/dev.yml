@@ -1,0 +1,9 @@
+env: dev
+registry: registry.example.com
+registry_username: user
+registry_password: pass
+image_name: hypercode-core
+image_tag: latest
+db_url: postgresql://user:pass@db:5432/hypercode
+redis_url: redis://localhost:6379/0
+jwt_secret: change-me

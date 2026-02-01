@@ -1,0 +1,320 @@
+openapi: 3.0.3
+info:
+  title: HyperCode Backend API
+  version: 1.0.0
+  description: HyperCode backend endpoints for compiling and simulating flows
+servers:
+  - url: http://localhost:8000
+    description: Local development
+tags:
+  - name: system
+  - name: workflows
+  - name: compile
+  - name: auth
+security:
+  - bearerAuth: []
+paths:
+  /:
+    get:
+      tags: [system]
+      summary: Root status
+      responses:
+        '200':
+          description: Service online
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: string
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /health:
+    get:
+      tags: [system]
+      summary: Health check
+      responses:
+        '200':
+          description: Service health
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  services:
+                    type: object
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /celery/health:
+    get:
+      tags: [system]
+      summary: Celery workers health
+      responses:
+        '200':
+          description: Cluster health
+          content:
+            application/json:
+              schema:
+                type: object
+        '503':
+          description: Cluster unhealthy
+  /workflows:
+    get:
+      tags: [workflows]
+      summary: List workflows
+      x-scopes:
+        - workflows:read
+      responses:
+        '200':
+          description: Workflows list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Workflow'
+    post:
+      tags: [workflows]
+      summary: Create workflow
+      x-scopes:
+        - workflows:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Workflow'
+            examples:
+              create:
+                value:
+                  name: Example Flow
+                  flow:
+                    nodes: []
+                    edges: []
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workflow'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /runs/{run_id}:
+    get:
+      tags: [compile]
+      summary: Get run by ID
+      x-scopes:
+        - runs:read
+      parameters:
+        - in: path
+          name: run_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Run data
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /compile:
+    post:
+      tags: [compile]
+      summary: Compile and simulate a flow
+      x-scopes:
+        - compile:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FlowRequest'
+            examples:
+              default:
+                value:
+                  nodes: []
+                  edges: []
+      responses:
+        '200':
+          description: Compilation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompileResponse'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /cache/warm:
+    post:
+      tags: [system]
+      summary: Warm cache keys
+      x-scopes:
+        - cache:warm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                keys:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Cache warmed
+  /cache/metrics:
+    get:
+      tags: [system]
+      summary: Cache metrics
+      responses:
+        '200':
+          description: Metrics
+          content:
+            application/json:
+              schema:
+                type: object
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: Refresh token
+      responses:
+        '200':
+          description: New token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        '401':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /metrics/deployments:
+    get:
+      tags: [system]
+      summary: Deployment metrics dashboard
+      responses:
+        '200':
+          description: Deployment statistics
+          content:
+            application/json:
+              schema:
+                type: object
+  /metrics/deployments/push:
+    post:
+      tags: [system]
+      summary: Push deployment metrics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                duration_ms:
+                  type: integer
+                success:
+                  type: boolean
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Accepted
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    FlowRequest:
+      type: object
+      properties:
+        nodes:
+          type: array
+          items:
+            type: object
+        edges:
+          type: array
+          items:
+            type: object
+        viewport:
+          type: object
+          nullable: true
+    CompileResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        simulation:
+          type: object
+        message:
+          type: string
+        runId:
+          type: string
+        requestId:
+          type: string
+    Workflow:
+      type: object
+      properties:
+        id:
+          type: string
+          nullable: true
+        name:
+          type: string
+        flow:
+          type: object
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+        requestId:
+          type: string
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    RateLimit:
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: Internal error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
