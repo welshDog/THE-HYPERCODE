@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ReactFlow, { useNodesState, useEdgesState, addEdge, Background, Controls, type Node, type Edge, type OnEdgesChange, type OnNodesChange, type Connection, type ReactFlowInstance } from 'reactflow';
 import { useFlowStore } from '../store/flowStore';
 
@@ -9,13 +9,17 @@ type Props = {
 };
 
 export function HyperflowCanvas({ initialNodes, initialEdges, onChange }: Props) {
-  const [nodes, _setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [nodes, , onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const { setNodes: storeSetNodes, setEdges: storeSetEdges } = useFlowStore();
   const rfRef = useRef<ReactFlowInstance | null>(null);
   const [pending, setPending] = useState(false);
 
   const handleConnect = (c: Connection) => setEdges((eds) => addEdge(c, eds));
+
+  useEffect(() => {
+    onChange?.({ nodes, edges });
+  }, []);
 
   useEffect(() => {
     const id = setInterval(() => {

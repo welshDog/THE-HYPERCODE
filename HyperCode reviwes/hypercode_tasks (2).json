@@ -1,0 +1,346 @@
+{
+  "IMMEDIATE_QUICK_WINS": [
+    {
+      "id": "QW1",
+      "task": "Add CI status badge to README.md",
+      "priority": "\ud83d\udd25 CRITICAL",
+      "difficulty": "Easy",
+      "time": "15 min",
+      "why": "Instant credibility boost - green checks = trust"
+    },
+    {
+      "id": "QW2",
+      "task": "Add Architecture diagram to README (even ASCII art)",
+      "priority": "\ud83d\udd25 CRITICAL",
+      "difficulty": "Easy",
+      "time": "30 min",
+      "why": "Shows you're serious about design"
+    },
+    {
+      "id": "QW3",
+      "task": "Run 3 example files in CI: bell_pair.hc, parameterized_gate.hc, hybrid_logic.hc",
+      "priority": "\ud83d\udd25 CRITICAL",
+      "difficulty": "Medium",
+      "time": "1 hour",
+      "why": "Proves the examples actually work"
+    },
+    {
+      "id": "QW4",
+      "task": "Create SECURITY.md with vulnerability reporting process",
+      "priority": "\ud83d\udd25 CRITICAL",
+      "difficulty": "Easy",
+      "time": "20 min",
+      "why": "Professional repos have security policies"
+    },
+    {
+      "id": "QW5",
+      "task": "Add status table to README: Implemented \u2705 / Prototype \u26a0\ufe0f / Planned \ud83e\udded",
+      "priority": "\ud83d\udd25 CRITICAL",
+      "difficulty": "Easy",
+      "time": "30 min",
+      "why": "Cuts aspirational claims, sets honest expectations"
+    }
+  ],
+  "CI_CD_ENFORCEMENT": [
+    {
+      "id": "CI1",
+      "task": "Add/verify .github/workflows/ci.yml runs: black, mypy, pytest, docs build",
+      "priority": "\ud83d\udd25 CRITICAL",
+      "difficulty": "Medium",
+      "time": "2 hours",
+      "why": "CI is the foundation of quality"
+    },
+    {
+      "id": "CI2",
+      "task": "Make CI required for all PRs (branch protection rules)",
+      "priority": "\ud83d\udd25 CRITICAL",
+      "difficulty": "Easy",
+      "time": "10 min",
+      "why": "Prevents broken code from merging"
+    },
+    {
+      "id": "CI3",
+      "task": "Add pytest coverage gate: fail if < 80%",
+      "priority": "\u26a1 HIGH",
+      "difficulty": "Easy",
+      "time": "15 min",
+      "why": "Maintains code quality baseline"
+    },
+    {
+      "id": "CI4",
+      "task": "Add pre-commit hooks (black, ruff, end-of-file, trailing whitespace)",
+      "priority": "\u26a1 HIGH",
+      "difficulty": "Easy",
+      "time": "30 min",
+      "why": "Catches issues before commit"
+    },
+    {
+      "id": "CI5",
+      "task": "Add Dependabot for pip + GitHub Actions versions",
+      "priority": "\u26a1 HIGH",
+      "difficulty": "Easy",
+      "time": "15 min",
+      "why": "Automated dependency updates"
+    }
+  ],
+  "TESTING_HARDENING": [
+    {
+      "id": "T1",
+      "task": "Add CLI integration tests: hypercode --version",
+      "priority": "\ud83d\udd25 CRITICAL",
+      "difficulty": "Easy",
+      "time": "20 min",
+      "why": "Basic smoke test"
+    },
+    {
+      "id": "T2",
+      "task": "Add CLI integration tests: hypercode --help",
+      "priority": "\ud83d\udd25 CRITICAL",
+      "difficulty": "Easy",
+      "time": "20 min",
+      "why": "Ensures CLI is functional"
+    },
+    {
+      "id": "T3",
+      "task": "Add CLI integration tests: hypercode quantum run examples/bell_pair.hc",
+      "priority": "\ud83d\udd25 CRITICAL",
+      "difficulty": "Medium",
+      "time": "1 hour",
+      "why": "End-to-end quantum workflow proof"
+    },
+    {
+      "id": "T4",
+      "task": "Add golden snapshot tests for AST output of all examples/*.hc files",
+      "priority": "\u26a1 HIGH",
+      "difficulty": "Medium",
+      "time": "2 hours",
+      "why": "Prevents AST regressions"
+    },
+    {
+      "id": "T5",
+      "task": "Add golden snapshot tests for IR output of all examples/*.hc files",
+      "priority": "\u26a1 HIGH",
+      "difficulty": "Medium",
+      "time": "2 hours",
+      "why": "Ensures IR stability"
+    },
+    {
+      "id": "T6",
+      "task": "Add parser negative tests: invalid tokens, mismatched delimiters",
+      "priority": "\u26a1 HIGH",
+      "difficulty": "Medium",
+      "time": "2 hours",
+      "why": "Error handling coverage"
+    },
+    {
+      "id": "T7",
+      "task": "Add property-based tests using Hypothesis (fuzz identifiers, whitespace)",
+      "priority": "\ud83d\udca1 MEDIUM",
+      "difficulty": "Hard",
+      "time": "4 hours",
+      "why": "Discovers edge cases"
+    },
+    {
+      "id": "T8",
+      "task": "Add backend determinism tests: same input = same Qiskit circuit",
+      "priority": "\ud83d\udca1 MEDIUM",
+      "difficulty": "Medium",
+      "time": "2 hours",
+      "why": "Reproducible builds"
+    }
+  ],
+  "SECURITY_HARDENING": [
+    {
+      "id": "S1",
+      "task": "Add 'no eval/exec' CI grep gate (fail if eval( or exec( found outside tests)",
+      "priority": "\ud83d\udd25 CRITICAL",
+      "difficulty": "Easy",
+      "time": "30 min",
+      "why": "Prevents code injection vulnerabilities"
+    },
+    {
+      "id": "S2",
+      "task": "Add bandit security scanner to CI",
+      "priority": "\ud83d\udd25 CRITICAL",
+      "difficulty": "Easy",
+      "time": "20 min",
+      "why": "Automated security checks"
+    },
+    {
+      "id": "S3",
+      "task": "Add pip-audit / safety dependency scanning to CI",
+      "priority": "\ud83d\udd25 CRITICAL",
+      "difficulty": "Easy",
+      "time": "20 min",
+      "why": "Supply chain security"
+    },
+    {
+      "id": "S4",
+      "task": "Add path traversal prevention tests for CLI file operations",
+      "priority": "\u26a1 HIGH",
+      "difficulty": "Medium",
+      "time": "1 hour",
+      "why": "Prevents ../../ write attacks"
+    },
+    {
+      "id": "S5",
+      "task": "Audit all subprocess calls: ensure shell=False, no string concatenation",
+      "priority": "\u26a1 HIGH",
+      "difficulty": "Medium",
+      "time": "1 hour",
+      "why": "Shell injection prevention"
+    },
+    {
+      "id": "S6",
+      "task": "Add SLSA-style build: wheel in CI, store artifact, verify install",
+      "priority": "\ud83d\udca1 MEDIUM",
+      "difficulty": "Medium",
+      "time": "2 hours",
+      "why": "Supply chain attestation"
+    }
+  ],
+  "ARCHITECTURE_CLEANUP": [
+    {
+      "id": "A1",
+      "task": "Create ARCHITECTURE.md documenting: execution flow, module purposes, where to add features",
+      "priority": "\ud83d\udd25 CRITICAL",
+      "difficulty": "Medium",
+      "time": "2 hours",
+      "why": "Onboards contributors, prevents confusion"
+    },
+    {
+      "id": "A2",
+      "task": "Clarify hypercode/ vs interpreter/ split OR merge them",
+      "priority": "\ud83d\udd25 CRITICAL",
+      "difficulty": "Hard",
+      "time": "4 hours",
+      "why": "Eliminates dual-runtime confusion"
+    },
+    {
+      "id": "A3",
+      "task": "Define IR contract: add IR_VERSION constant, document IR schema",
+      "priority": "\u26a1 HIGH",
+      "difficulty": "Medium",
+      "time": "2 hours",
+      "why": "Prevents backend rot"
+    },
+    {
+      "id": "A4",
+      "task": "Freeze MVP syntax: document tiny core grammar, mark rest as v0.2+",
+      "priority": "\u26a1 HIGH",
+      "difficulty": "Medium",
+      "time": "3 hours",
+      "why": "Prevents scope creep"
+    }
+  ],
+  "DOCUMENTATION": [
+    {
+      "id": "D1",
+      "task": "Decide docs tool: MkDocs OR Sphinx (pick one, commit config)",
+      "priority": "\u26a1 HIGH",
+      "difficulty": "Easy",
+      "time": "30 min",
+      "why": "Ends tooling indecision"
+    },
+    {
+      "id": "D2",
+      "task": "Add docs build job to CI",
+      "priority": "\u26a1 HIGH",
+      "difficulty": "Easy",
+      "time": "30 min",
+      "why": "Catches broken docs"
+    },
+    {
+      "id": "D3",
+      "task": "Update README: add compatibility matrix (Python versions, OS)",
+      "priority": "\u26a1 HIGH",
+      "difficulty": "Easy",
+      "time": "20 min",
+      "why": "Sets clear expectations"
+    },
+    {
+      "id": "D4",
+      "task": "Add 'Quick Start' section to README (5 commands max)",
+      "priority": "\u26a1 HIGH",
+      "difficulty": "Easy",
+      "time": "30 min",
+      "why": "New users need fast onboarding"
+    },
+    {
+      "id": "D5",
+      "task": "Add 'Language Tour' section to README (3 short code examples)",
+      "priority": "\ud83d\udca1 MEDIUM",
+      "difficulty": "Easy",
+      "time": "45 min",
+      "why": "Shows what HyperCode looks like"
+    }
+  ],
+  "RELEASE_AUTOMATION": [
+    {
+      "id": "R1",
+      "task": "Finish/merge homepage deploy PR (#3)",
+      "priority": "\u26a1 HIGH",
+      "difficulty": "Easy",
+      "time": "30 min",
+      "why": "Marketing surface must be stable"
+    },
+    {
+      "id": "R2",
+      "task": "Add release automation: python -m build + GitHub Release workflow on tag",
+      "priority": "\ud83d\udca1 MEDIUM",
+      "difficulty": "Medium",
+      "time": "2 hours",
+      "why": "One-command releases"
+    },
+    {
+      "id": "R3",
+      "task": "Pin dev tooling (black, mypy, pytest versions)",
+      "priority": "\ud83d\udca1 MEDIUM",
+      "difficulty": "Easy",
+      "time": "15 min",
+      "why": "Reproducible dev environment"
+    },
+    {
+      "id": "R4",
+      "task": "Add CHANGELOG.md enforcement: CI fails if version bump without changelog entry",
+      "priority": "\ud83d\udca1 MEDIUM",
+      "difficulty": "Medium",
+      "time": "1 hour",
+      "why": "Maintains release notes"
+    }
+  ],
+  "SCOPE_CONTROL": [
+    {
+      "id": "SC1",
+      "task": "Create GitHub Project board: v0.1 / v0.2 / v0.3 / Future columns",
+      "priority": "\u26a1 HIGH",
+      "difficulty": "Easy",
+      "time": "30 min",
+      "why": "Visual scope management"
+    },
+    {
+      "id": "SC2",
+      "task": "Move visual syntax to v0.2+ milestone",
+      "priority": "\u26a1 HIGH",
+      "difficulty": "Easy",
+      "time": "5 min",
+      "why": "Focus v0.1 on text-only"
+    },
+    {
+      "id": "SC3",
+      "task": "Move molecular computing to v0.3+ milestone",
+      "priority": "\u26a1 HIGH",
+      "difficulty": "Easy",
+      "time": "5 min",
+      "why": "Focus v0.1 on quantum backend only"
+    },
+    {
+      "id": "SC4",
+      "task": "Label all 'aspirational' features in issues with 'future' tag",
+      "priority": "\ud83d\udca1 MEDIUM",
+      "difficulty": "Easy",
+      "time": "20 min",
+      "why": "Honest roadmap communication"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+id,category,priority,size,task,description,target,impact,file
+1,Quick Win,HIGH,S,Pin dependencies in pyproject.toml,"Add version locks: qiskit~=1.0.0, pytest>=7.4, etc.",Week 1 (Jan 4-11),Security fix - prevents supply chain attacks,pyproject.toml
+2,Quick Win,HIGH,S,Add architecture diagram to README,Create Mermaid diagram showing: Input → Parser → AST → IR → Backends,Week 1 (Jan 4-11),Clarity for contributors + credibility,README.md
+3,Quick Win,HIGH,S,Write 3 unit tests for quantum.py,"Test @quantum decorator parsing, Bell pair circuit generation",Week 1 (Jan 4-11),Testing foundation + quality signal,tests/test_quantum.py
+4,Quick Win,MED,S,Run pylint and fix errors,"Clean up code quality issues, add .pylintrc config",Week 1 (Jan 4-11),Code quality + maintainability,All .py files
+5,Quick Win,MED,S,Bump to v0.1.1 with changelog,"Release notes: ""Security + testing improvements""",Week 1 (Jan 4-11),Shows active development,"CHANGELOG.md, pyproject.toml"
+6,PR Priority,HIGH,S,PR #1: Pin all dependencies,Complete dependency pinning in pyproject.toml + requirements-dev.txt,Week 2 (Jan 12-18),Critical security hardening,"pyproject.toml, requirements-dev.txt"
+7,PR Priority,HIGH,M,PR #2: Expand parser tests,Add 10+ test cases in tests/test_syntax.py covering ANTLR grammar,Week 2 (Jan 12-18),Parser reliability + prevents regressions,tests/test_syntax.py
+8,PR Priority,HIGH,L,PR #3: Stub visual syntax system,"Create syntax/visual.py with basic node class, color coding structure",Week 3 (Jan 19-25),Core differentiator for neurodivergent users,syntax/visual.py
+9,PR Priority,HIGH,M,PR #4: Fix quantum backend bugs,"Handle circuit execution errors, add error handling to quantum.py",Week 3 (Jan 19-25),Quantum demo stability,hypercode/quantum.py
+10,PR Priority,MED,S,PR #5: CI with coverage reporting,"Add pytest-cov to .github/workflows, set 80% target",Week 4 (Jan 26-Feb 1),Continuous quality monitoring,.github/workflows/test.yml
+11,PR Priority,MED,S,PR #6: Add 5+ code examples,"Create classical, quantum, molecular stub demos in examples/",Week 5 (Feb 2-8),User onboarding + showcases vision,examples/
+12,PR Priority,HIGH,M,PR #7: Security audit with bandit,"Scan codebase, fix eval/exec issues in interpreter/, sanitize file handling",Week 6 (Feb 9-15),Critical security hardening,"interpreter/, examples/"
+13,PR Priority,MED,L,PR #8: Prototype IR optimizer,Implement simple dead code elimination pass for HyperCode IR,Week 7-8 (Feb 16-28),Proves IR optimization capability,hypercode/optimizer.py
+14,PR Priority,MED,M,PR #9: Documentation overhaul,"Set up MkDocs, add API refs, tutorials, architecture deep-dive",Week 7-8 (Feb 16-28),Contributor onboarding + professionalism,docs/
+15,PR Priority,LOW,S,PR #10: Community outreach materials,"Write dev.to post, prepare r/ADHD_Programmers post, create pitch deck",Week 8 (Feb 23-28),Community growth + visibility,OUTREACH.md
+16,Immediate Action,HIGH,M,Write dev.to post,"Title: ""HyperCode: Building a Programming Language for Neurodivergent Minds""",This Week (Jan 4-11),Initial community awareness,External (dev.to)
+17,Immediate Action,HIGH,S,Post to r/ADHD_Programmers,"Title: ""I'm dyslexic and building a programming language for us — feedback wanted?""",This Week (Jan 4-11),Target audience feedback,External (Reddit)
+18,Immediate Action,MED,S,Post to r/neurodiversity,Share vision + request beta testers,This Week (Jan 4-11),Community building,External (Reddit)
+19,Strategic,HIGH,L,Recruit 1-2 co-maintainers,"Post to HN ""Who's Hiring"", Neurodiversity in Tech communities",January 2026,Reduces single-maintainer risk,CONTRIBUTING.md
+20,Strategic,MED,M,Set up Discord/GitHub Discussions,"Create community space, gamify with BROski$ coins for contributions",January 2026,Community engagement infrastructure,Community platforms
+21,Strategic,MED,S,Add Dependabot to repo,"Auto-update dependencies, get security alerts",January 2026,Automated security monitoring,.github/dependabot.yml
+22,Q1 Goal (v0.2),HIGH,XL,Ship v0.2 - Full textual syntax,"Complete parser with full ANTLR grammar, semantic analyzer implementation",Q1 2026 (by Mar 31),Core language functionality complete,"syntax/, semantic_analyzer.py"
+23,Q1 Goal,HIGH,L,User study with 10 neurodivergent coders,"Gather feedback on syntax, visuals, accessibility features",Q1 2026 (Feb-Mar),Validates design decisions,user_studies/
+24,Q1 Goal,MED,M,Apply for Mozilla MOSS / NLnet grants,Submit grant applications for accessibility project funding,Q1 2026 (by Feb 28),Funding for full-time development,grants/
+25,Roadmap,MED,XL,v0.3 - Classical backend (LLVM),"Complete IR builder, integrate LLVM for classical code generation",Q2 2026,Multi-paradigm proof of concept,hypercode/backends/llvm.py
+26,Roadmap,HIGH,XL,v0.4 - Visual syntax prototype,"Node-based visual editor, bidirectional text↔visual conversion",Q3 2026,Core differentiator operational,visual_editor/
+27,Roadmap,MED,L,v0.5 - Molecular backend (DSD),"DNA Strand Displacement backend stub, basic bio-computing examples",Q4 2026,Completes tri-paradigm vision,hypercode/backends/molecular.py
+28,Roadmap,MED,L,v0.6 - Mature AI agents,"Functional LSP server, LLM co-dev tools, domain-specific hints",Q1 2027,AI-assisted coding operational,ai-agents/
+29,Roadmap,LOW,XL,v1.0 - Stable release,"Full visual editor, multi-domain examples, marketing push, accessibility audits",Q2 2027,Production-ready language,All systems

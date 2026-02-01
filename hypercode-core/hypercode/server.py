@@ -1,13 +1,16 @@
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Request, Depends
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 import json
 import asyncio
 import time
 import uuid
 import hashlib
 import os
+import logging
 from sqlalchemy import create_engine, text
 from alembic.config import Config as AlembicConfig
 from alembic import command as alembic_command
@@ -28,7 +31,15 @@ REQUEST_TIMES: Dict[str, List[float]] = {}
 RUNS: Dict[str, Dict[str, Any]] = {}
 CACHE_STATS: Dict[str, Dict[str, int]] = {"dev": {"hit": 0, "miss": 0}, "staging": {"hit": 0, "miss": 0}, "prod": {"hit": 0, "miss": 0}}
 JWT_ALG = "HS256"
-JWT_SECRET = os.getenv("HYPERCODE_JWT_SECRET", "")
+JWT_SECRET = os.getenv("HYPERCODE_JWT_SECRET", "") or os.getenv("JWT_SECRET", "")
+JWT_EXP_SECS = int(os.getenv("HYPERCODE_JWT_EXP_SECS", "900"))
+REFRESH_EXP_SECS = int(os.getenv("HYPERCODE_REFRESH_EXP_SECS", "86400"))
+RATE_USER_PER_MIN = int(os.getenv("HYPERCODE_RATE_USER_PER_MIN", "100"))
+RATE_IP_PER_MIN = int(os.getenv("HYPERCODE_RATE_IP_PER_MIN", "1000"))
+RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("HYPERCODE_RATE_WINDOW_SECS", "60"))
+
+LOGGER = logging.getLogger("hypercode.security")
+logging.basicConfig(level=os.getenv("HYPERCODE_LOG_LEVEL", "INFO"))
 
 HTTP_REQUESTS = Counter("http_requests_total", "Total HTTP requests", ["method", "path", "status"])
 HTTP_ERRORS = Counter("http_errors_total", "Total HTTP errors", ["path", "status"])
@@ -45,34 +56,80 @@ def get_request_id(req: Request) -> str:
     hdr = req.headers.get("x-request-id")
     return hdr if hdr else str(uuid.uuid4())
 
-def check_rate_limit(ip: str) -> bool:
-    ts_list = REQUEST_TIMES.get(ip, [])
-    cutoff = now() - RATE_LIMIT_WINDOW_SECONDS
-    ts_list = [ts for ts in ts_list if ts >= cutoff]
-    REQUEST_TIMES[ip] = ts_list
-    if len(ts_list) >= RATE_LIMIT_MAX_REQUESTS:
-        return False
-    ts_list.append(now())
-    REQUEST_TIMES[ip] = ts_list
-    return True
+def _redis_client() -> Optional[redis.Redis]:
+    try:
+        url = os.getenv("HYPERCODE_REDIS_URL") or os.getenv("REDIS_URL")
+        if not url:
+            return None
+        return redis.Redis.from_url(url)
+    except Exception:
+        return None
+
+def _rate_key(kind: str, ident: str) -> str:
+    return f"rate:{kind}:{ident}"
+
+def _rate_check_sorted_set(r: redis.Redis, key: str, window_secs: int, limit: int) -> Tuple[bool, int]:
+    now_ts = int(time.time())
+    window_start = now_ts - window_secs
+    try:
+        r.zremrangebyscore(key, 0, window_start)
+        r.zadd(key, {str(now_ts): now_ts})
+        count = r.zcard(key)
+        r.expire(key, window_secs)
+        if count > limit:
+            oldest = r.zrange(key, 0, 0, withscores=True)
+            retry_after = window_secs if not oldest else max(0, int(oldest[0][1]) + window_secs - now_ts)
+            return False, retry_after
+        return True, 0
+    except Exception:
+        return True, 0
+
+async def enforce_rate_limit(request: Request, claims: Optional[Dict[str, Any]] = None) -> None:
+    ip = request.client.host if request.client else "unknown"
+    user_id = (claims or {}).get("sub") or "anon"
+    r = _redis_client()
+    if r:
+        ok_ip, retry_ip = _rate_check_sorted_set(r, _rate_key("ip", ip), RATE_LIMIT_WINDOW_SECONDS, RATE_IP_PER_MIN)
+        ok_user, retry_user = _rate_check_sorted_set(r, _rate_key("u", user_id), RATE_LIMIT_WINDOW_SECONDS, RATE_USER_PER_MIN)
+        if not ok_ip or not ok_user:
+            retry_after = max(retry_ip, retry_user)
+            LOGGER.warning(f"rate_limit_violation ip={ip} user={user_id} retry_after={retry_after}")
+            raise HTTPException(status_code=429, detail={"code": "RATE_LIMIT_EXCEEDED", "message": "Too many requests"}, headers={"Retry-After": str(retry_after)})
+    else:
+        ts_list = REQUEST_TIMES.get(ip, [])
+        cutoff = now() - RATE_LIMIT_WINDOW_SECONDS
+        ts_list = [ts for ts in ts_list if ts >= cutoff]
+        REQUEST_TIMES[ip] = ts_list
+        if len(ts_list) >= RATE_LIMIT_MAX_REQUESTS:
+            raise HTTPException(status_code=429, detail={"code": "RATE_LIMIT_EXCEEDED", "message": "Too many requests"}, headers={"Retry-After": str(RATE_LIMIT_WINDOW_SECONDS)})
+        ts_list.append(now())
+        REQUEST_TIMES[ip] = ts_list
 
 def decode_jwt(token: str) -> Dict[str, Any]:
     try:
         import jwt
-        return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG]) if JWT_SECRET else jwt.decode(token, options={"verify_signature": False})
-    except Exception:
-        return {}
+        if not JWT_SECRET:
+            raise HTTPException(status_code=500, detail={"code": "JWT_SECRET_MISSING", "message": "Server misconfigured"})
+        return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
+    except HTTPException:
+        raise
+    except Exception as e:
+        LOGGER.warning(f"jwt_decode_failure error={str(e)}")
+        raise HTTPException(status_code=401, detail={"code": "INVALID_TOKEN", "message": "Token invalid or expired"})
 
 def require_scopes(required: List[str]):
     async def dependency(request: Request) -> None:
         auth = request.headers.get("authorization") or request.headers.get("Authorization")
         if not auth or not auth.lower().startswith("bearer "):
+            LOGGER.info("auth_missing_bearer")
             raise HTTPException(status_code=401, detail={"code": "UNAUTHORIZED", "message": "Missing bearer token"})
         token = auth.split(" ", 1)[1]
         claims = decode_jwt(token)
+        await enforce_rate_limit(request, claims)
         scopes: List[str] = claims.get("scopes", []) if isinstance(claims.get("scopes", []), list) else []
         for s in required:
             if s not in scopes:
+                LOGGER.info(f"auth_insufficient_scope required={required}")
                 raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Insufficient scope", "required": required})
     return dependency
 
@@ -81,7 +138,7 @@ class CacheManager:
         self.env = os.getenv("HYPERCODE_ENV", "dev")
         self._mem: Dict[str, Any] = {}
         self._redis = None
-        url = os.getenv("HYPERCODE_REDIS_URL")
+        url = os.getenv("HYPERCODE_REDIS_URL") or os.getenv("REDIS_URL")
         if url:
             try:
                 self._redis = redis.Redis.from_url(url)
@@ -135,7 +192,7 @@ def check_db() -> bool:
 
 def check_redis() -> bool:
     try:
-        url = os.getenv("HYPERCODE_REDIS_URL")
+        url = os.getenv("HYPERCODE_REDIS_URL") or os.getenv("REDIS_URL")
         if not url:
             return False
         r = redis.Redis.from_url(url)
@@ -161,6 +218,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+class RateLimitHeaderMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        try:
+            response.headers["x-ratelimit-limit"] = str(RATE_IP_PER_MIN)
+        except Exception:
+            pass
+        return response
+
+app.add_middleware(RateLimitHeaderMiddleware)
 
 class FlowRequest(BaseModel):
     nodes: List[Dict[str, Any]]
@@ -190,12 +258,10 @@ async def health_check() -> Dict[str, Any]:
 @app.get("/ready")
 async def ready() -> Any:
     res = check_ready()
-    from fastapi import Response
     return Response(content=json.dumps({"status": res["status"], "deps": res["deps"]}), media_type="application/json", status_code=res["code"])
 
 @app.get("/metrics")
 async def metrics() -> Any:
-    from fastapi import Response
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 @app.get("/celery/health")
@@ -203,7 +269,7 @@ async def celery_health() -> Dict[str, Any]:
     import time
     import os
     import redis as _redis
-    r = _redis.Redis.from_url(os.getenv("HYPERCODE_REDIS_URL", "redis://localhost:6379/0"))
+    r = _redis.Redis.from_url(os.getenv("HYPERCODE_REDIS_URL") or os.getenv("REDIS_URL") or "redis://localhost:6379/0")
     names: List[str] = []
     for k in r.scan_iter("celery:worker:*:success"):
         try:
@@ -313,14 +379,7 @@ async def compile_endpoint(flow: FlowRequest, request: Request, _: None = Depend
     """
     try:
         start = time.time()
-        client_ip = request.client.host if request.client else "unknown"
-        if not check_rate_limit(client_ip):
-            req_id = get_request_id(request)
-            raise HTTPException(status_code=429, detail={
-                "code": "RATE_LIMIT_EXCEEDED",
-                "message": "Too many requests",
-                "requestId": req_id
-            })
+        await enforce_rate_limit(request)
 
         request_id = get_request_id(request)
         idem_key = request.headers.get("x-idempotency-key")
@@ -394,10 +453,47 @@ async def auth_refresh(request: Request) -> Dict[str, Any]:
         import jwt
         if not JWT_SECRET:
             raise HTTPException(status_code=500, detail={"code": "JWT_SECRET_MISSING", "message": "Server misconfigured"})
-        new = jwt.encode({"sub": claims.get("sub"), "scopes": claims.get("scopes", []), "ts": int(time.time())}, JWT_SECRET, algorithm=JWT_ALG)
-        return {"token": new}
+        sub = claims.get("sub")
+        now_ts = int(time.time())
+        exp = now_ts + JWT_EXP_SECS
+        new = jwt.encode({"sub": sub, "scopes": claims.get("scopes", []), "iat": now_ts, "exp": exp}, JWT_SECRET, algorithm=JWT_ALG)
+        r = _redis_client()
+        refresh_token = None
+        if r and sub:
+            rt = str(uuid.uuid4())
+            r.setex(f"refresh:{sub}:{rt}", REFRESH_EXP_SECS, "1")
+            refresh_token = rt
+        payload: Dict[str, Any] = {"token": new}
+        if refresh_token:
+            payload["refreshToken"] = refresh_token
+        return payload
     except Exception as e:
         raise HTTPException(status_code=500, detail={"code": "TOKEN_REFRESH_ERROR", "message": str(e)})
+
+@app.post("/auth/rotate")
+async def auth_rotate(request: Request) -> Dict[str, Any]:
+    auth = request.headers.get("authorization") or request.headers.get("Authorization")
+    refresh_token = request.headers.get("x-refresh-token")
+    if not auth or not auth.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail={"code": "UNAUTHORIZED", "message": "Missing bearer token"})
+    if not refresh_token:
+        raise HTTPException(status_code=400, detail={"code": "REFRESH_TOKEN_REQUIRED", "message": "Missing refresh token"})
+    claims = decode_jwt(auth.split(" ", 1)[1])
+    sub = claims.get("sub")
+    r = _redis_client()
+    if not r or not sub or not r.get(f"refresh:{sub}:{refresh_token}"):
+        raise HTTPException(status_code=401, detail={"code": "INVALID_REFRESH_TOKEN", "message": "Refresh token invalid"})
+    try:
+        import jwt
+        now_ts = int(time.time())
+        exp = now_ts + JWT_EXP_SECS
+        new = jwt.encode({"sub": sub, "scopes": claims.get("scopes", []), "iat": now_ts, "exp": exp}, JWT_SECRET, algorithm=JWT_ALG)
+        r.delete(f"refresh:{sub}:{refresh_token}")
+        rt = str(uuid.uuid4())
+        r.setex(f"refresh:{sub}:{rt}", REFRESH_EXP_SECS, "1")
+        return {"token": new, "refreshToken": rt}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail={"code": "TOKEN_ROTATE_ERROR", "message": str(e)})
 
 DEPLOY_HISTORY_KEY = "deploy:history"
 

@@ -11,6 +11,8 @@ tags:
   - name: workflows
   - name: compile
   - name: auth
+  - name: admin
+  - name: metrics
 security:
   - bearerAuth: []
 paths:
@@ -50,6 +52,34 @@ paths:
                     type: object
         '500':
           $ref: '#/components/responses/InternalError'
+  /ready:
+    get:
+      tags: [system]
+      summary: Readiness check
+      responses:
+        '200':
+          description: Service ready
+          content:
+            application/json:
+              schema:
+                type: object
+        '503':
+          description: Service degraded
+          content:
+            application/json:
+              schema:
+                type: object
+  /metrics:
+    get:
+      tags: [metrics]
+      summary: Prometheus metrics
+      responses:
+        '200':
+          description: Metrics exposition format
+          content:
+            text/plain:
+              schema:
+                type: string
   /celery/health:
     get:
       tags: [system]
@@ -211,13 +241,44 @@ paths:
                 properties:
                   token:
                     type: string
+                  refreshToken:
+                    type: string
+                    nullable: true
         '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /auth/rotate:
+    post:
+      tags: [auth]
+      summary: Rotate token using refresh token
+      parameters:
+        - in: header
+          name: x-refresh-token
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: New rotated token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  refreshToken:
+                    type: string
+        '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalError'
   /metrics/deployments:
     get:
-      tags: [system]
+      tags: [metrics]
       summary: Deployment metrics dashboard
       responses:
         '200':
@@ -228,7 +289,7 @@ paths:
                 type: object
   /metrics/deployments/push:
     post:
-      tags: [system]
+      tags: [metrics]
       summary: Push deployment metrics
       requestBody:
         required: true
@@ -246,6 +307,76 @@ paths:
       responses:
         '200':
           description: Accepted
+  /metrics/anomalies:
+    get:
+      tags: [metrics]
+      summary: Deployment anomalies
+      responses:
+        '200':
+          description: Anomaly summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  indices:
+                    type: array
+                    items:
+                      type: integer
+                  last_z:
+                    type: number
+  /admin/audit/logs:
+    get:
+      tags: [admin]
+      summary: Admin audit logs
+      x-scopes:
+        - admin:read
+      responses:
+        '200':
+          description: Audit log items
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+  /admin/workflows/{wf_id}:
+    delete:
+      tags: [admin]
+      summary: Delete workflow by ID (admin)
+      x-scopes:
+        - admin:delete
+      parameters:
+        - in: path
+          name: wf_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: Not found
+  /dashboard:
+    get:
+      tags: [system]
+      summary: HTML metrics dashboard
+      responses:
+        '200':
+          description: Dashboard HTML
+          content:
+            text/html:
+              schema:
+                type: string
 components:
   securitySchemes:
     bearerAuth:
@@ -306,6 +437,18 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+      Unauthorized:
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ErrorResponse'
+      Forbidden:
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ErrorResponse'
     RateLimit:
       description: Too many requests
       content:

@@ -1,0 +1,317 @@
+{
+  "quick_wins_today": [
+    {
+      "id": "QW1",
+      "priority": "Critical",
+      "effort": "5min",
+      "task": "Fix repo URL in pyproject.toml",
+      "details": "Update repository URL from 'welshDog/hypercode' to 'welshDog/THE-HYPERCODE'",
+      "files": [
+        "pyproject.toml"
+      ],
+      "status": "\u2b1c TODO"
+    },
+    {
+      "id": "QW2",
+      "priority": "Critical",
+      "effort": "10min",
+      "task": "Clarify code vs docs license",
+      "details": "Update README and LICENSE: docs = CC-BY 4.0, code = MIT or Apache-2.0",
+      "files": [
+        "README.md",
+        "LICENSE",
+        "pyproject.toml"
+      ],
+      "status": "\u2b1c TODO"
+    },
+    {
+      "id": "QW3",
+      "priority": "High",
+      "effort": "15min",
+      "task": "Restrict CLI backend choices",
+      "details": "Change --backend to only ['qiskit'] or add explicit 'Not implemented' stubs for classical/molecular",
+      "files": [
+        "hypercode/cli.py",
+        "hypercode/backends/__init__.py"
+      ],
+      "status": "\u2b1c TODO"
+    },
+    {
+      "id": "QW4",
+      "priority": "High",
+      "effort": "30min",
+      "task": "Add minimal classical example",
+      "details": "Create examples/classical_filter_positive.hc and reference in README Quick Start",
+      "files": [
+        "examples/classical/filter_positive.hc",
+        "README.md"
+      ],
+      "status": "\u2b1c TODO"
+    },
+    {
+      "id": "QW5",
+      "priority": "Medium",
+      "effort": "20min",
+      "task": "Add coverage badge to README",
+      "details": "Run tests, generate coverage, add badge even if coverage is low",
+      "files": [
+        "README.md",
+        ".github/workflows/test.yml"
+      ],
+      "status": "\u2b1c TODO"
+    }
+  ],
+  "pr_roadmap": [
+    {
+      "pr": "PR1",
+      "priority": "High",
+      "effort": "Medium (2-4hrs)",
+      "title": "Backend choices + registry alignment",
+      "tasks": [
+        "Restrict CLI --backend choices to ['qiskit'] only",
+        "OR add ClassicalBackend/MolecularBackend stubs that raise NotImplementedError",
+        "Update backend registry to clearly show available vs planned",
+        "Add tests for backend selection logic"
+      ],
+      "files": [
+        "hypercode/cli.py",
+        "hypercode/backends/__init__.py",
+        "hypercode/backends/classical_backend.py",
+        "tests/test_backend_registry.py"
+      ],
+      "status": "\u2b1c TODO"
+    },
+    {
+      "pr": "PR2",
+      "priority": "High",
+      "effort": "Medium (3-5hrs)",
+      "title": "Structured error types and ExecutionResult",
+      "tasks": [
+        "Define HyperCodeError base class",
+        "Create subclasses: HyperCodeParseError, HyperCodeRuntimeError, HyperCodeBackendError",
+        "Add error location info (line, column, file)",
+        "Update api.execute to catch specific errors",
+        "Update ExecutionResult to carry error type + structured info",
+        "Update CLI to display structured errors nicely"
+      ],
+      "files": [
+        "hypercode/errors.py",
+        "hypercode/api.py",
+        "hypercode/results.py",
+        "hypercode/cli.py",
+        "tests/test_errors.py"
+      ],
+      "status": "\u2b1c TODO"
+    },
+    {
+      "pr": "PR3",
+      "priority": "High",
+      "effort": "Medium (4-6hrs)",
+      "title": "Minimal classical backend implementation",
+      "tasks": [
+        "Implement classical_backend.py with basic interpreter",
+        "Support core subset: variables, conditionals, loops, functions",
+        "Add 3-5 classical examples (filter, map, factorial, fibonacci)",
+        "Add tests for classical backend execution",
+        "Update README with classical examples"
+      ],
+      "files": [
+        "hypercode/backends/classical_backend.py",
+        "examples/classical/*.hc",
+        "tests/test_classical_backend.py",
+        "README.md"
+      ],
+      "status": "\u2b1c TODO"
+    },
+    {
+      "pr": "PR4",
+      "priority": "High",
+      "effort": "Medium (3-4hrs)",
+      "title": "IR spec and centralization",
+      "tasks": [
+        "Create docs/source/ir_spec.md documenting IR design",
+        "Add docstrings to all qir_nodes classes",
+        "Document SSA invariants and type system",
+        "Add type checking for IR nodes",
+        "Create examples of AST \u2192 IR \u2192 Backend flow"
+      ],
+      "files": [
+        "docs/source/ir_spec.md",
+        "hypercode/ir/qir_nodes.py",
+        "hypercode/ir/__init__.py",
+        "tests/test_ir_invariants.py"
+      ],
+      "status": "\u2b1c TODO"
+    },
+    {
+      "pr": "PR5",
+      "priority": "High",
+      "effort": "Small (2-3hrs)",
+      "title": "README overhaul + repo URL fix",
+      "tasks": [
+        "Implement new README structure (see Bud's outline)",
+        "Add Quick Start with install + run example",
+        "Add 'Using as a library' section with code example",
+        "Add 'For Contributors' section with starter tasks",
+        "Fix all repo URLs to THE-HYPERCODE",
+        "Add status/maturity table"
+      ],
+      "files": [
+        "README.md",
+        "pyproject.toml"
+      ],
+      "status": "\u2b1c TODO"
+    },
+    {
+      "pr": "PR6",
+      "priority": "Medium",
+      "effort": "Medium (3-4hrs)",
+      "title": "CLI tests and --no-color support",
+      "tasks": [
+        "Add tests for 'hypercode parse' command",
+        "Add tests for 'hypercode qir' command",
+        "Add tests for 'hypercode run' command",
+        "Add tests for 'hypercode version' command",
+        "Test error paths (file not found, parse errors, unknown backend)",
+        "Add --no-color flag",
+        "Add TTY detection for color output"
+      ],
+      "files": [
+        "tests/test_cli.py",
+        "hypercode/cli.py"
+      ],
+      "status": "\u2b1c TODO"
+    },
+    {
+      "pr": "PR7",
+      "priority": "Medium",
+      "effort": "Medium (2-3hrs)",
+      "title": "Engine abstraction for CLI/API",
+      "tasks": [
+        "Create hypercode/engine.py module",
+        "Implement run_program(code, backend, shots, seed) function",
+        "Refactor CLI to use engine",
+        "Refactor API to use engine",
+        "Add tests for engine module"
+      ],
+      "files": [
+        "hypercode/engine.py",
+        "hypercode/cli.py",
+        "hypercode/api.py",
+        "tests/test_engine.py"
+      ],
+      "status": "\u2b1c TODO"
+    },
+    {
+      "pr": "PR8",
+      "priority": "Medium",
+      "effort": "Medium (2-3hrs)",
+      "title": "Quantum resource limits",
+      "tasks": [
+        "Create hypercode/config.py with limit constants",
+        "Add MAX_QUBITS, MAX_DEPTH, MAX_SHOTS config",
+        "Enforce limits in Evaluator",
+        "Enforce limits in QiskitBackend",
+        "Add env var support for config overrides",
+        "Add tests for resource limit enforcement"
+      ],
+      "files": [
+        "hypercode/config.py",
+        "hypercode/evaluator.py",
+        "hypercode/backends/qiskit_backend.py",
+        "tests/test_resource_limits.py"
+      ],
+      "status": "\u2b1c TODO"
+    },
+    {
+      "pr": "PR9",
+      "priority": "Medium",
+      "effort": "Small (1-2hrs)",
+      "title": "Coverage reporting + badge",
+      "tasks": [
+        "Configure pytest to output coverage.xml",
+        "Create GitHub Actions workflow for tests",
+        "Upload coverage to Codecov or similar",
+        "Add coverage badge to README",
+        "Set coverage target (e.g., >70%)"
+      ],
+      "files": [
+        "pytest.ini",
+        ".github/workflows/test.yml",
+        "README.md"
+      ],
+      "status": "\u2b1c TODO"
+    },
+    {
+      "pr": "PR10",
+      "priority": "Medium",
+      "effort": "Large (4-6hrs)",
+      "title": "Sphinx docs site",
+      "tasks": [
+        "Organize docs into User Guide / Language Reference / Compiler Internals / Research",
+        "Create index.rst with clear navigation",
+        "Build docs site with Sphinx",
+        "Add 'Getting Started' guide",
+        "Add 'Language Reference' section",
+        "Deploy to ReadTheDocs or GitHub Pages"
+      ],
+      "files": [
+        "docs/source/index.rst",
+        "docs/source/user_guide/*",
+        "docs/source/language_ref/*",
+        "docs/source/compiler/*",
+        ".readthedocs.yml"
+      ],
+      "status": "\u2b1c TODO"
+    }
+  ],
+  "additional_critical_tasks": [
+    {
+      "id": "SEC1",
+      "priority": "High",
+      "effort": "1hr",
+      "task": "Add dependency pinning",
+      "details": "Create requirements-dev.txt with locked versions for CI; run pip-audit periodically",
+      "files": [
+        "requirements-dev.txt",
+        ".github/workflows/security.yml"
+      ],
+      "status": "\u2b1c TODO"
+    },
+    {
+      "id": "SEC2",
+      "priority": "High",
+      "effort": "2hrs",
+      "task": "Verify no eval/exec in Evaluator",
+      "details": "Audit Evaluator and backends to ensure no string-based code execution; add security tests",
+      "files": [
+        "hypercode/interpreter/evaluator.py",
+        "hypercode/backends/*",
+        "tests/test_security.py"
+      ],
+      "status": "\u2b1c TODO"
+    },
+    {
+      "id": "DOC1",
+      "priority": "Medium",
+      "effort": "1hr",
+      "task": "Add CONTRIBUTING.md",
+      "details": "Create contributor guide with setup, code style, PR process, good first issues",
+      "files": [
+        "docs/CONTRIBUTING.md"
+      ],
+      "status": "\u2b1c TODO"
+    },
+    {
+      "id": "DOC2",
+      "priority": "Medium",
+      "effort": "30min",
+      "task": "Add VERSIONING.md",
+      "details": "Document SemVer policy and breaking-change process",
+      "files": [
+        "docs/VERSIONING.md"
+      ],
+      "status": "\u2b1c TODO"
+    }
+  ]
+}

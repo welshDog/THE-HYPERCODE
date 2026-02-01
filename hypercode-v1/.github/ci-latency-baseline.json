@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "stages": {
+    "test": {
+      "baseline_ms": 90000,
+      "notes": "Derived from recent runs; adjust via governance script if stable improvement persists."
+    },
+    "build": {
+      "baseline_ms": 120000,
+      "notes": "Python package build + checks."
+    },
+    "deploy": {
+      "baseline_ms": 60000,
+      "notes": "PyPI publish step; 0 when skipped."
+    }
+  },
+  "threshold_percent": 5
+}

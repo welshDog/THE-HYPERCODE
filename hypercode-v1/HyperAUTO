@@ -1,0 +1,115 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-python.python",
+    "ms-vscode.cpptools",
+    "rust-lang.rust-analyzer",
+    "github.copilot",
+    "github.vscode-pull-request-github",
+    "tamasfe.even-better-toml",
+    "yzhang.markdown-all-in-one"
+  ]
+}
+      "label": "Build HyperCode",
+      "type": "shell",
+      "command": "cargo build --release",
+      "problemMatcher": []
+    },
+    {
+      "label": "Start Dev Server",
+      "type": "shell",
+      "command": "npm run dev",
+      "problemMatcher": []
+    }
+  ]
+}
+What it does:
+
+Press Ctrl+Shift+B (or Cmd+Shift+B on Mac) -> runs default task
+
+Go to Terminal → Run Task to pick any task
+
+Auto-installs dependencies, runs tests, builds project
+
+4. .vscode/launch.json — Auto-Configure Debugging
+This sets up debugging so you can hit F5 and debug instantly.
+
+json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Python Script",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Debug Rust Binary",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/target/debug/hypercode",
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Debug Node.js App",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/index.js",
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}
+What it does:
+
+Press F5 -> auto-starts debugger
+
+Breakpoints, step-through, variable inspection — all ready to go
+
+🚀 Bonus: Add a README.md Setup Section
+Add this to your main README.md:
+
+text
+## 🛠️ Quick Setup (VS Code)
+
+1. **Clone the repo:**
+git clone https://github.com/yourusername/hypercode.git
+cd hypercode
+
+text
+
+2. **Open in VS Code:**
+code .
+
+text
+
+3. **Install recommended extensions** (when prompted)
+
+4. **Run setup task:**
+- Press `Ctrl+Shift+B` (or `Cmd+Shift+B`)
+- Select "Install Dependencies"
+
+**That's it!** You're ready to code. 🎉
+📦 File Structure You'll Have
+text
+hypercode/
+├── .vscode/
+│   ├── extensions.json      ← Auto-recommend extensions
+│   ├── settings.json         ← Auto-configure editor
+│   ├── tasks.json            ← Auto-run build/test tasks
+│   └── launch.json           ← Auto-configure debugging
+├── src/
+├── tests/
+├── README.md
+└── ... (rest of your project)
+💡 Why This is KILLER
+✅ One-click onboarding — new contributors open folder → everything auto-configures
+✅ Zero manual setup — no "install this, configure that"
+✅ Consistent environment — everyone uses same formatters, linters, settings
+✅ Pro-level workflow — industry-standard DevOps automation baked in
+✅ Neurodivergent-friendly — less cognitive load, more flow state coding
+
+Want me to create these actual files for your HyperCode repo right now? Just say the word and I'll generate them with your specific project structure! 🔥💪

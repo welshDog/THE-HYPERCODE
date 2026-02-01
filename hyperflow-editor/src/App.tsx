@@ -761,7 +761,7 @@ function App() {
             </button>
           </div>
         </Panel>
-      </ReactFlow>
+      
 
       {isShowoff && (
         <Panel position="top-left" style={{ background: 'white', borderRadius: '8px', padding: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>

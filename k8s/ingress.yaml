@@ -3,7 +3,17 @@ kind: Ingress
 metadata:
   name: hypercode-core
   namespace: hypercode
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/hsts: "true"
+    nginx.ingress.kubernetes.io/hsts-max-age: "63072000"
+    nginx.ingress.kubernetes.io/content-security-policy: "default-src 'self'"
+    nginx.ingress.kubernetes.io/x-frame-options: "DENY"
 spec:
+  tls:
+    - hosts:
+        - hypercode.example.com
+      secretName: hypercode-tls
   rules:
     - host: hypercode.example.com
       http:

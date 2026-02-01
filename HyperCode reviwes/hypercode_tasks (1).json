@@ -1,0 +1,364 @@
+{
+  "\ud83d\udd34 CRITICAL - DO FIRST (Blocks Progress)": [
+    {
+      "id": 1,
+      "task": "Publish formal grammar specification",
+      "details": "Create EBNF or ANTLR .g4 file in docs/grammar.md",
+      "difficulty": "Medium",
+      "time": "1 week",
+      "why": "Language is technically undefined without this - blocks LSP, formatters, alt parsers",
+      "priority": "\ud83d\udd34 CRITICAL - DO FIRST (Blocks Progress)"
+    },
+    {
+      "id": 2,
+      "task": "Define .hir IR text format",
+      "details": "Create human-readable HyperCode IR format with examples (like MLIR's .mlir files)",
+      "difficulty": "Medium",
+      "time": "1 week",
+      "why": "Can't inspect or debug IR - it's a black box right now",
+      "priority": "\ud83d\udd34 CRITICAL - DO FIRST (Blocks Progress)"
+    },
+    {
+      "id": 3,
+      "task": "Add pytest-cov + 80% coverage target",
+      "details": "Add coverage.py config, CI integration, display badge in README",
+      "difficulty": "Small",
+      "time": "1-2 days",
+      "why": "Proves code quality, catches bugs in parser/IR/quantum circuits",
+      "priority": "\ud83d\udd34 CRITICAL - DO FIRST (Blocks Progress)"
+    },
+    {
+      "id": 4,
+      "task": "Write security threat model for AI agents",
+      "details": "Create docs/security/ai-sandboxing.md with threat model, prevent code injection",
+      "difficulty": "Medium",
+      "time": "1 week",
+      "why": "LLM-generated code is supply chain risk - RCE vulnerability",
+      "priority": "\ud83d\udd34 CRITICAL - DO FIRST (Blocks Progress)"
+    },
+    {
+      "id": 5,
+      "task": "Fix Python 3.10+ version enforcement",
+      "details": "Add python_requires='>=3.10' to setup.py",
+      "difficulty": "Small",
+      "time": "30 mins",
+      "why": "Users on Python 3.9 will hit cryptic errors",
+      "priority": "\ud83d\udd34 CRITICAL - DO FIRST (Blocks Progress)"
+    }
+  ],
+  "\u26a1 QUICK WINS - DO THIS WEEKEND (4 Hours Total)": [
+    {
+      "id": 6,
+      "task": "Add coverage badge to README",
+      "details": "Setup pytest-cov in CI, upload to Codecov, add badge",
+      "difficulty": "Small",
+      "time": "1 hour",
+      "impact": "Shows project is serious about quality",
+      "priority": "\u26a1 QUICK WINS - DO THIS WEEKEND (4 Hours Total)"
+    },
+    {
+      "id": 7,
+      "task": "Fix 'Last Updated' date typo",
+      "details": "Change 'December 30, 2025' \u2192 'December 30, 2024' in README",
+      "difficulty": "Trivial",
+      "time": "2 mins",
+      "impact": "Looks professional, not sloppy",
+      "priority": "\u26a1 QUICK WINS - DO THIS WEEKEND (4 Hours Total)"
+    },
+    {
+      "id": 8,
+      "task": "Add CLI help text to README",
+      "details": "Document all hypercode commands (quantum run, validate, ir, etc)",
+      "difficulty": "Small",
+      "time": "1 hour",
+      "impact": "Users know what features exist",
+      "priority": "\u26a1 QUICK WINS - DO THIS WEEKEND (4 Hours Total)"
+    },
+    {
+      "id": 9,
+      "task": "Create CONTRIBUTING.md",
+      "details": "Add setup guide, PR process, code standards",
+      "difficulty": "Small",
+      "time": "1 hour",
+      "impact": "Signals project is open to contributors",
+      "priority": "\u26a1 QUICK WINS - DO THIS WEEKEND (4 Hours Total)"
+    },
+    {
+      "id": 10,
+      "task": "Add expected output to examples",
+      "details": "Create .expected.txt files for each example in examples/",
+      "difficulty": "Small",
+      "time": "1 hour",
+      "impact": "Users can verify installation works",
+      "priority": "\u26a1 QUICK WINS - DO THIS WEEKEND (4 Hours Total)"
+    }
+  ],
+  "\ud83d\udfe1 HIGH PRIORITY - NEXT SPRINT (2-4 Weeks)": [
+    {
+      "id": 11,
+      "task": "Create backend abstraction layer",
+      "details": "Define Backend interface in hypercode/backends/base.py",
+      "difficulty": "Large",
+      "time": "2-4 weeks",
+      "why": "Prevents vendor lock-in to IBM Qiskit, enables Cirq/PyQuil",
+      "priority": "\ud83d\udfe1 HIGH PRIORITY - NEXT SPRINT (2-4 Weeks)"
+    },
+    {
+      "id": 12,
+      "task": "Add integration tests for all examples",
+      "details": "Create tests/test_examples.py that runs all .hc files",
+      "difficulty": "Small",
+      "time": "2 days",
+      "why": "Validates installation, prevents regressions",
+      "priority": "\ud83d\udfe1 HIGH PRIORITY - NEXT SPRINT (2-4 Weeks)"
+    },
+    {
+      "id": 13,
+      "task": "Document complete CLI reference",
+      "details": "Create docs/cli-reference.md with all commands, flags, examples",
+      "difficulty": "Small",
+      "time": "1 day",
+      "why": "Poor discoverability of features currently",
+      "priority": "\ud83d\udfe1 HIGH PRIORITY - NEXT SPRINT (2-4 Weeks)"
+    },
+    {
+      "id": 14,
+      "task": "Add Docker + .devcontainer",
+      "details": "Create Dockerfile and .devcontainer/ for VSCode Remote",
+      "difficulty": "Medium",
+      "time": "1 week",
+      "why": "Reduces onboarding friction for new contributors",
+      "priority": "\ud83d\udfe1 HIGH PRIORITY - NEXT SPRINT (2-4 Weeks)"
+    },
+    {
+      "id": 15,
+      "task": "Define optimization passes",
+      "details": "Spec 5 concrete passes: const folding, DCE, quantum circuit simplification, etc",
+      "difficulty": "Medium",
+      "time": "1 week",
+      "why": "Phase 3 is vague - need concrete plan for compiler optimizations",
+      "priority": "\ud83d\udfe1 HIGH PRIORITY - NEXT SPRINT (2-4 Weeks)"
+    },
+    {
+      "id": 16,
+      "task": "Add benchmarking suite",
+      "details": "Create benchmarks/ with pytest-benchmark for parsing, IR, backends",
+      "difficulty": "Medium",
+      "time": "1 week",
+      "why": "Can't measure performance regressions or compare to competitors",
+      "priority": "\ud83d\udfe1 HIGH PRIORITY - NEXT SPRINT (2-4 Weeks)"
+    }
+  ],
+  "\ud83d\udfe2 IMPORTANT - POLISH & FOUNDATION (Backlog)": [
+    {
+      "id": 17,
+      "task": "Rename repo THE-HYPERCODE \u2192 HyperCode",
+      "details": "GitHub repo rename to match branding",
+      "difficulty": "Trivial",
+      "time": "5 mins",
+      "why": "Branding confusion, hard to Google with THE- prefix",
+      "priority": "\ud83d\udfe2 IMPORTANT - POLISH & FOUNDATION (Backlog)"
+    },
+    {
+      "id": 18,
+      "task": "Add related work comparison",
+      "details": "Create docs/related-work.md comparing to Silq, Q#, Quipper, Cirq",
+      "difficulty": "Small",
+      "time": "2 days",
+      "why": "Proves you know the competitive landscape",
+      "priority": "\ud83d\udfe2 IMPORTANT - POLISH & FOUNDATION (Backlog)"
+    },
+    {
+      "id": 19,
+      "task": "Explain package.json + pyproject.toml",
+      "details": "Add DEVELOPMENT.md explaining both files (is there JS component?)",
+      "difficulty": "Small",
+      "time": "1 hour",
+      "why": "Confusing for contributors - Python or Node.js?",
+      "priority": "\ud83d\udfe2 IMPORTANT - POLISH & FOUNDATION (Backlog)"
+    },
+    {
+      "id": 20,
+      "task": "Add security audit tooling",
+      "details": "Add pip-audit or safety to CI, create 'make audit' command",
+      "difficulty": "Small",
+      "time": "2 days",
+      "why": "Qiskit has 20+ dependencies - need supply chain scanning",
+      "priority": "\ud83d\udfe2 IMPORTANT - POLISH & FOUNDATION (Backlog)"
+    },
+    {
+      "id": 21,
+      "task": "Validate file path security",
+      "details": "Use pathlib.Path.resolve() to prevent ../../etc/passwd escapes",
+      "difficulty": "Small",
+      "time": "1 day",
+      "why": "CLI file path injection vulnerability",
+      "priority": "\ud83d\udfe2 IMPORTANT - POLISH & FOUNDATION (Backlog)"
+    },
+    {
+      "id": 22,
+      "task": "Add fuzz testing",
+      "details": "Use hypothesis for property-based tests, random inputs to parser",
+      "difficulty": "Medium",
+      "time": "1 week",
+      "why": "Find parser crashes and edge cases",
+      "priority": "\ud83d\udfe2 IMPORTANT - POLISH & FOUNDATION (Backlog)"
+    }
+  ],
+  "\ud83d\ude80 BIG BETS - MAKE OR BREAK FEATURES": [
+    {
+      "id": 23,
+      "task": "Build visual editor prototype (CRITICAL)",
+      "details": "React + ReactFlow web-based node editor, 10 core node types, text\u2194visual sync",
+      "difficulty": "Large",
+      "time": "1-2 months",
+      "why": "Dual syntax is THE killer feature - vaporware concern if not shipped",
+      "milestone": "v0.4.0 (Q3 2025)",
+      "priority": "\ud83d\ude80 BIG BETS - MAKE OR BREAK FEATURES"
+    },
+    {
+      "id": 24,
+      "task": "Implement LSP + VSCode extension",
+      "details": "Language Server Protocol for autocomplete, diagnostics, AI suggestions",
+      "difficulty": "Large",
+      "time": "1-2 months",
+      "why": "Dev tooling ecosystem - makes HyperCode production-ready",
+      "milestone": "v0.5.0 (Q4 2025)",
+      "priority": "\ud83d\ude80 BIG BETS - MAKE OR BREAK FEATURES"
+    },
+    {
+      "id": 25,
+      "task": "Add Cirq backend support",
+      "details": "Implement Cirq backend using abstraction layer from task #11",
+      "difficulty": "Large",
+      "time": "2-4 weeks",
+      "why": "Proves multi-backend architecture works, breaks IBM lock-in",
+      "milestone": "v0.3.0 (Q2 2025)",
+      "priority": "\ud83d\ude80 BIG BETS - MAKE OR BREAK FEATURES"
+    },
+    {
+      "id": 26,
+      "task": "Research molecular computing (DSD) backend",
+      "details": "DNA strand displacement IR dialect, 1 working example",
+      "difficulty": "Extra Large",
+      "time": "2-3 months",
+      "why": "Unique differentiator - no other quantum lang does molecular",
+      "milestone": "v0.6.0 (Q1 2026)",
+      "priority": "\ud83d\ude80 BIG BETS - MAKE OR BREAK FEATURES"
+    }
+  ],
+  "\ud83d\udcda DOCUMENTATION OVERHAUL": [
+    {
+      "id": 27,
+      "task": "Rewrite README with new structure",
+      "details": "What & Why \u2192 Quick Start \u2192 Language Tour \u2192 Architecture \u2192 FAQ \u2192 Roadmap",
+      "difficulty": "Medium",
+      "time": "1 week",
+      "why": "Current README missing key info, FAQ section needed",
+      "priority": "\ud83d\udcda DOCUMENTATION OVERHAUL"
+    },
+    {
+      "id": 28,
+      "task": "Create comprehensive tutorial",
+      "details": "5-10 progressively complex examples with explanations",
+      "difficulty": "Medium",
+      "time": "2 weeks",
+      "why": "Only 1 example currently - need learning path",
+      "priority": "\ud83d\udcda DOCUMENTATION OVERHAUL"
+    },
+    {
+      "id": 29,
+      "task": "Write API reference docs",
+      "details": "Document all hypercode package modules with docstrings",
+      "difficulty": "Medium",
+      "time": "1 week",
+      "why": "No API docs visible for developers",
+      "priority": "\ud83d\udcda DOCUMENTATION OVERHAUL"
+    },
+    {
+      "id": 30,
+      "task": "Create architecture diagrams",
+      "details": "Mermaid/SVG diagrams for execution flow, IR structure, backend architecture",
+      "difficulty": "Small",
+      "time": "3 days",
+      "why": "Text-based descriptions need visual support",
+      "priority": "\ud83d\udcda DOCUMENTATION OVERHAUL"
+    },
+    {
+      "id": 31,
+      "task": "Add FAQ section",
+      "details": "Answer: Why not just Qiskit? How vs Silq? Visual editor timeline? Windows support?",
+      "difficulty": "Small",
+      "time": "2 days",
+      "why": "Common questions have no answers currently",
+      "priority": "\ud83d\udcda DOCUMENTATION OVERHAUL"
+    }
+  ],
+  "\ud83c\udfaf TESTING & QUALITY": [
+    {
+      "id": 32,
+      "task": "Build comprehensive test suite",
+      "details": "unit/ (lexer, parser, IR), integration/ (e2e), fuzzing/, benchmarks/",
+      "difficulty": "Large",
+      "time": "3-4 weeks",
+      "why": "Unclear test coverage - need parser edge cases, IR validation, backend failures",
+      "priority": "\ud83c\udfaf TESTING & QUALITY"
+    },
+    {
+      "id": 33,
+      "task": "Add quantum circuit validation tests",
+      "details": "Test against known probabilities (Bell state: 00=50%, 11=50% \u00b15%)",
+      "difficulty": "Medium",
+      "time": "1 week",
+      "why": "Probabilistic results need tolerance checks for CI",
+      "priority": "\ud83c\udfaf TESTING & QUALITY"
+    },
+    {
+      "id": 34,
+      "task": "Setup property-based testing",
+      "details": "Use hypothesis for invariants (e.g., 'IR is always valid SSA')",
+      "difficulty": "Medium",
+      "time": "1 week",
+      "why": "Catch edge cases automated testing misses",
+      "priority": "\ud83c\udfaf TESTING & QUALITY"
+    }
+  ],
+  "\ud83c\udfa4 MARKETING & COMMUNITY": [
+    {
+      "id": 35,
+      "task": "Submit to Hacker News Show HN",
+      "details": "Post when visual editor alpha works with demo video",
+      "difficulty": "Small",
+      "time": "2 hours",
+      "impact": "Massive visibility in tech community",
+      "priority": "\ud83c\udfa4 MARKETING & COMMUNITY"
+    },
+    {
+      "id": 36,
+      "task": "Write blog post: 'Why Quantum Needs Neurodivergent Designers'",
+      "details": "Tell the HyperCode story, accessibility angle, publish on Medium/Dev.to",
+      "difficulty": "Medium",
+      "time": "1 week",
+      "impact": "Narrative bomb - social impact meets cutting-edge CS",
+      "priority": "\ud83c\udfa4 MARKETING & COMMUNITY"
+    },
+    {
+      "id": 37,
+      "task": "Submit Strange Loop talk proposal",
+      "details": "Topic: Accessibility + PL design, dual syntax demo",
+      "difficulty": "Medium",
+      "time": "1 week",
+      "impact": "Academic/industry credibility, conference exposure",
+      "priority": "\ud83c\udfa4 MARKETING & COMMUNITY"
+    },
+    {
+      "id": 38,
+      "task": "Setup community channels",
+      "details": "Discord/Slack, add links to README, define community guidelines",
+      "difficulty": "Small",
+      "time": "1 day",
+      "impact": "Builds contributor community",
+      "priority": "\ud83c\udfa4 MARKETING & COMMUNITY"
+    }
+  ]
+}

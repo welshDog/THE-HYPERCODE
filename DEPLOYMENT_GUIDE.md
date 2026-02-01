@@ -1,5 +1,9 @@
 # 🚀 Deployment Guide: BROski Bot & Dashboard
 
+> **⚠️ NOTE FOR CORE INFRASTRUCTURE**
+> This guide focuses on the **Discord Bot and Dashboard**.
+> For the **HyperCode Core Engine** (Backend/API) security prerequisites and Kubernetes/Docker deployment specs, please refer to [DEPLOYMENT.md](./DEPLOYMENT.md).
+
 You are deploying the **HyperCode Stack**:
 1. **Backend**: Discord Bot + Express API (Node.js)
 2. **Frontend**: React Dashboard (Vite Static Site)
