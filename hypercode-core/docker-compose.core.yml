@@ -1,0 +1,44 @@
+
+version: '3.8'
+
+networks:
+  core-tier:
+    driver: bridge
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: hyper-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - ./data/pg15:/var/lib/postgresql/data
+    networks:
+      - core-tier
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: hyper-redis
+    restart: always
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --appendonly yes
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - ./data/redis:/data
+    networks:
+      - core-tier
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

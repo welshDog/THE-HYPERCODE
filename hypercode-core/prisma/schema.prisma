@@ -1,0 +1,40 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("HYPERCODE_DB_URL")
+}
+
+generator client {
+  provider = "prisma-client-py"
+  interface = "asyncio"
+  recursive_type_depth = 5
+}
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  name      String?
+  role      String    @default("user")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  missions  Mission[]
+}
+
+model Mission {
+  id          String    @id @default(uuid())
+  title       String
+  status      String    @default("pending") // pending, active, completed, failed
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  memories    Memory[]
+}
+
+model Memory {
+  id        String   @id @default(uuid())
+  content   String
+  type      String   // short-term, long-term, knowledge
+  missionId String?
+  mission   Mission? @relation(fields: [missionId], references: [id])
+  createdAt DateTime @default(now())
+}
