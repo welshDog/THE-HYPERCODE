@@ -24,7 +24,7 @@ def configure_logging():
 
     structlog.configure(
         processors=processors,
-        wrapper_class=structlog.make_filtering_bound_logger(logging.getLevelName(settings.LOG_LEVEL)),
+        wrapper_class=structlog.make_filtering_bound_logger(logging.getLevelName(settings.LOG_LEVEL.upper())),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=True,
@@ -34,5 +34,5 @@ def configure_logging():
     logging.basicConfig(
         format="%(message)s",
         stream=sys.stdout,
-        level=settings.LOG_LEVEL,
+        level=settings.LOG_LEVEL.upper(),
     )

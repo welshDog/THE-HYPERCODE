@@ -2,14 +2,37 @@
 from fastapi import FastAPI
 import sentry_sdk
 from prometheus_fastapi_instrumentator import Instrumentator
-from app.routers import agents, memory, execution
+from app.routers import agents, memory, execution, metrics
 from app.core.config import get_settings
 from app.core.logging import configure_logging
+from app.core.db import db
+from contextlib import asynccontextmanager
+
+# OpenTelemetry Imports
+from opentelemetry import trace
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 settings = get_settings()
 
 # Initialize Logging
 configure_logging()
+
+# Initialize OpenTelemetry
+resource = Resource(attributes={
+    "service.name": "hypercode-core",
+    "service.version": "2.0.0",
+    "deployment.environment": settings.ENVIRONMENT
+})
+
+provider = TracerProvider(resource=resource)
+# Use Jaeger OTLP HTTP port
+otlp_exporter = OTLPSpanExporter(endpoint="http://jaeger:4318/v1/traces")
+provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
+trace.set_tracer_provider(provider)
 
 # Initialize Sentry
 if settings.SENTRY_DSN:
@@ -20,7 +43,16 @@ if settings.SENTRY_DSN:
         profiles_sample_rate=1.0,
     )
 
-app = FastAPI(title="HyperCode Core Engine")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await db.connect()
+    yield
+    await db.disconnect()
+
+app = FastAPI(title="HyperCode Core Engine", lifespan=lifespan)
+
+# Instrument FastAPI with OpenTelemetry
+FastAPIInstrumentor.instrument_app(app)
 
 # Initialize Prometheus
 Instrumentator().instrument(app).expose(app)
@@ -28,7 +60,10 @@ Instrumentator().instrument(app).expose(app)
 app.include_router(agents.router, prefix="/agents", tags=["Agents"])
 app.include_router(memory.router, prefix="/memory", tags=["Memory"])
 app.include_router(execution.router, prefix="/execution", tags=["Execution"])
+app.include_router(metrics.router, prefix="/metrics", tags=["Metrics"])
 
 @app.get("/health")
-def health_check():
-    return {"status": "healthy"}
+async def health_check():
+    tracer = trace.get_tracer(__name__)
+    with tracer.start_as_current_span("health_check_manual"):
+        return {"status": "healthy"}

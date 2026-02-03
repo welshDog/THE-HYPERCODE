@@ -1,4 +1,3 @@
-
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from enum import Enum
@@ -18,23 +17,28 @@ class AgentCapability(BaseModel):
 class AgentMetadata(BaseModel):
     id: str
     name: str
-    description: str
+    role: str = "general"
     version: str
-    capabilities: List[AgentCapability] = []
-    endpoint: str
+    capabilities: List[str] = []
+    topics: List[str] = []
+    health_url: Optional[str] = None
     status: AgentStatus = AgentStatus.ACTIVE
     last_heartbeat: datetime = Field(default_factory=datetime.utcnow)
-    tags: List[str] = []
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    class Config:
+        from_attributes = True
 
 class AgentRegistrationRequest(BaseModel):
     name: str
-    description: str
+    role: str
     version: str
-    capabilities: List[AgentCapability] = []
-    endpoint: str
-    tags: List[str] = []
+    capabilities: List[str] = []
+    topics: List[str] = []
+    health_url: Optional[str] = None
+    dedup_key: Optional[str] = None
 
 class AgentHeartbeat(BaseModel):
     agent_id: str
     status: AgentStatus
-    load: float = 0.0  # 0.0 to 1.0
+    load: float = 0.0

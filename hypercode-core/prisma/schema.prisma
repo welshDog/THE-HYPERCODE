@@ -28,13 +28,54 @@ model Mission {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   memories    Memory[]
+  tokenUsages TokenUsage[]
 }
 
 model Memory {
   id        String   @id @default(uuid())
   content   String
   type      String   // short-term, long-term, knowledge
+  userId    String?
+  sessionId String?
+  metadata  Json?
+  keywords  String[]
   missionId String?
   mission   Mission? @relation(fields: [missionId], references: [id])
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  expiresAt DateTime?
+
+  @@index([type])
+  @@index([userId])
+  @@index([sessionId])
+}
+
+model TokenUsage {
+  id               String   @id @default(uuid())
+  missionId        String?
+  mission          Mission? @relation(fields: [missionId], references: [id])
+  model            String
+  promptTokens     Int
+  completionTokens Int
+  totalTokens      Int
+  cost             Float
+  createdAt        DateTime @default(now())
+}
+
+model Agent {
+  id             String   @id @default(uuid())
+  name           String
+  role           String
+  version        String
+  capabilities   String[]
+  topics         String[]
+  healthUrl      String?
+  status         String   @default("offline")
+  lastHeartbeat  DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  dedupKey       String?  @unique
+
+  @@index([role])
+  @@index([status])
 }
