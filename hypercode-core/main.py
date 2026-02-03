@@ -1,6 +1,11 @@
 
 from fastapi import FastAPI
-from prometheus_fastapi_instrumentator import Instrumentator
+try:
+    from prometheus_fastapi_instrumentator import Instrumentator
+    _instrumentator_available = True
+except Exception:
+    Instrumentator = None
+    _instrumentator_available = False
 from app.routers import agents, memory, execution, metrics
 from app.core.config import get_settings
 from app.core.logging import configure_logging
@@ -54,8 +59,15 @@ app = FastAPI(title="HyperCode Core Engine", lifespan=lifespan)
 # Instrument FastAPI with OpenTelemetry
 FastAPIInstrumentor.instrument_app(app)
 
-# Initialize Prometheus
-Instrumentator().instrument(app).expose(app)
+if _instrumentator_available:
+    Instrumentator().instrument(app).expose(app)
+else:
+    from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+    from fastapi import Response
+
+    @app.get("/metrics")
+    async def metrics_fallback():
+        return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 app.include_router(agents.router, prefix="/agents", tags=["Agents"])
 app.include_router(memory.router, prefix="/memory", tags=["Memory"])
