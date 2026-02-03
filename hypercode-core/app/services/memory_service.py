@@ -3,8 +3,15 @@ from typing import List, Optional
 from datetime import datetime
 from app.core.db import db
 from app.schemas.memory import MemoryCreate, MemoryUpdate, MemorySearch
-from prisma.models import Memory
-from prisma import Json
+try:
+    from prisma.models import Memory
+    from prisma import Json
+except Exception:
+    from typing import Any
+    Memory = Any
+    class Json(dict):
+        def __init__(self, value):
+            super().__init__(value if isinstance(value, dict) else {})
 
 logger = structlog.get_logger()
 
