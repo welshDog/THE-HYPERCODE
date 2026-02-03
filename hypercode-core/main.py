@@ -1,6 +1,5 @@
 
 from fastapi import FastAPI
-import sentry_sdk
 from prometheus_fastapi_instrumentator import Instrumentator
 from app.routers import agents, memory, execution, metrics
 from app.core.config import get_settings
@@ -34,8 +33,9 @@ otlp_exporter = OTLPSpanExporter(endpoint="http://jaeger:4318/v1/traces")
 provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
 trace.set_tracer_provider(provider)
 
-# Initialize Sentry
+# Initialize Sentry (optional)
 if settings.SENTRY_DSN:
+    import sentry_sdk
     sentry_sdk.init(
         dsn=settings.SENTRY_DSN,
         environment=settings.ENVIRONMENT,
