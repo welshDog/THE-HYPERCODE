@@ -78,6 +78,7 @@ async def lifespan(app: FastAPI):
         from app.services.event_bus import event_bus
         from app.schemas.message import MessageEnvelope
         from app.services.orchestrator import orchestrator
+        MAX_RETRIES = 5
         async def _heartbeat_sweep():
             while True:
                 try:
@@ -114,12 +115,19 @@ async def lifespan(app: FastAPI):
                                             await event_bus.redis.expire(rk, 3600)
                                         except Exception:
                                             rc = 1
-                                        base = 2.0
-                                        factor = 2.0
-                                        jitter = random.uniform(-0.5, 0.5)
-                                        delay = min(300.0, base * (factor ** max(rc - 1, 0))) + jitter
-                                        sched = time.time() + max(0.0, delay)
-                                        await event_bus.redis.zadd("mission:retry:zset", {mid: sched})
+                                        ok, _ = await event_bus.schedule_retry(mid, rc, base=2.0, factor=2.0, jitter=0.5, max_delay=300.0, max_retries=MAX_RETRIES)
+                                        if not ok:
+                                            try:
+                                                await event_bus.publish_stream(
+                                                    "mission.dlq",
+                                                    MessageEnvelope(
+                                                        sender_id="core",
+                                                        message_type="mission.retry.exhausted",
+                                                        payload={"mission_id": mid, "retries": rc}
+                                                    )
+                                                )
+                                            except Exception:
+                                                pass
                                 if msg_type == "mission.completed":
                                     mid = payload.get("mission_id")
                                     if mid:
@@ -151,10 +159,7 @@ async def lifespan(app: FastAPI):
             while True:
                 try:
                     now = time.time()
-                    try:
-                        due = await event_bus.redis.zrangebyscore("mission:retry:zset", min=0, max=now)
-                    except Exception:
-                        due = []
+                    due = await event_bus.dequeue_due_retries(now)
                     for mid in due:
                         try:
                             if isinstance(mid, bytes):
@@ -190,15 +195,60 @@ async def lifespan(app: FastAPI):
                                 )
                             except Exception:
                                 pass
-                            try:
-                                await event_bus.redis.zrem("mission:retry:zset", mid)
-                            except Exception:
-                                pass
+                            await event_bus.clear_retry(mid)
                         except Exception:
                             continue
                 except Exception:
                     pass
                 await asyncio.sleep(1.0)
+
+        async def _dlq_consumer():
+            try:
+                await event_bus.ensure_consumer_group("mission.dlq", "mission-dlq")
+            except Exception:
+                pass
+            while True:
+                try:
+                    entries = await event_bus.read_group("mission.dlq", "mission-dlq", consumer="core", count=10, block_ms=1000)
+                    for stream, rows in entries:
+                        for entry_id, fields in rows:
+                            try:
+                                msg_type = fields.get(b"message_type") or fields.get("message_type")
+                                if isinstance(msg_type, bytes):
+                                    msg_type = msg_type.decode()
+                                payload_raw = fields.get(b"payload") or fields.get("payload")
+                                if isinstance(payload_raw, bytes):
+                                    payload_raw = payload_raw.decode()
+                                payload = json.loads(payload_raw) if isinstance(payload_raw, str) else payload_raw
+                                mid = payload.get("mission_id")
+                                try:
+                                    await db.auditlog.create({
+                                        "missionId": mid or "unknown",
+                                        "transition": "dlq",
+                                        "previousState": payload.get("previous_state", "unknown"),
+                                        "newState": payload.get("new_state", "unknown"),
+                                        "actor": "system",
+                                        "reason": msg_type,
+                                    })
+                                except Exception:
+                                    pass
+                                if payload.get("replay") and mid:
+                                    try:
+                                        await event_bus.publish_stream(
+                                            "mission.events",
+                                            MessageEnvelope(
+                                                sender_id="dlq",
+                                                message_type="mission.queued",
+                                                payload={"mission_id": mid}
+                                            )
+                                        )
+                                    except Exception:
+                                        pass
+                                await event_bus.ack("mission.dlq", "mission-dlq", entry_id)
+                            except Exception:
+                                await event_bus.ack("mission.dlq", "mission-dlq", entry_id)
+                except Exception:
+                    await asyncio.sleep(1.0)
 
         try:
             env_lower = (settings.ENVIRONMENT or "").lower()
@@ -207,6 +257,7 @@ async def lifespan(app: FastAPI):
         if env_lower in ("staging", "production"):
             bg_tasks.append(asyncio.create_task(_mission_event_consumer()))
             bg_tasks.append(asyncio.create_task(_retry_scheduler()))
+            bg_tasks.append(asyncio.create_task(_dlq_consumer()))
     except Exception:
         pass
     yield

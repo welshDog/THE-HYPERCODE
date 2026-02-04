@@ -3,6 +3,7 @@ from app.core.db import db
 from pydantic import BaseModel
 import os
 import httpx
+from app.services.metrics_registry import metrics
 
 router = APIRouter()
 
@@ -52,3 +53,69 @@ async def agent_stream_summary():
         p95 = await q("job:agent_stream_latency_ms:hist_p95")
         p99 = await q("job:agent_stream_latency_ms:hist_p99")
         return {"p50_ms": p50, "p95_ms": p95, "p99_ms": p99}
+
+
+class PerformanceMetrics(BaseModel):
+    counters: dict
+
+
+@router.get("/performance", response_model=PerformanceMetrics)
+async def performance_metrics():
+    snap = metrics.snapshot()
+    return {"counters": snap["counters"]}
+
+
+class ErrorMetrics(BaseModel):
+    errors: dict
+
+
+@router.get("/errors", response_model=ErrorMetrics)
+async def error_metrics():
+    snap = metrics.snapshot()
+    return {"errors": snap["errors"]}
+
+
+class ExecutionMetrics(BaseModel):
+    count: int
+    avg_ms: float
+    p50_ms: float
+    p95_ms: float
+    p99_ms: float
+
+
+@router.get("/execution", response_model=ExecutionMetrics)
+async def execution_metrics():
+    snap = metrics.snapshot()
+    arr = snap["timers"].get("parser_duration_ms", [])
+    if not arr:
+        return {"count": 0, "avg_ms": 0.0, "p50_ms": 0.0, "p95_ms": 0.0, "p99_ms": 0.0}
+    srt = sorted(arr)
+    def pct(p: float) -> float:
+        i = max(0, min(len(srt) - 1, int(round(p * (len(srt) - 1)))))
+        return srt[i]
+    avg = sum(srt) / len(srt)
+    return {
+        "count": len(srt),
+        "avg_ms": avg,
+        "p50_ms": pct(0.5),
+        "p95_ms": pct(0.95),
+        "p99_ms": pct(0.99),
+    }
+
+
+class ResourceMetrics(BaseModel):
+    uptime_sec: float
+    memory_bytes: dict
+    threads: int
+    process_cpu_sec: float
+
+
+@router.get("/resources", response_model=ResourceMetrics)
+async def resource_metrics():
+    snap = metrics.snapshot()
+    return {
+        "uptime_sec": snap["uptime_sec"],
+        "memory_bytes": snap["memory_bytes"],
+        "threads": snap["threads"],
+        "process_cpu_sec": snap["process_cpu_sec"],
+    }

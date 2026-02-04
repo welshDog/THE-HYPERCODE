@@ -73,7 +73,7 @@ except Exception:
         async def create(self, data: Dict[str, Any]) -> Any:
             import uuid, datetime
             mid = data.get("id") or str(uuid.uuid4())
-            now = datetime.datetime.utcnow()
+            now = datetime.datetime.now(datetime.UTC)
             entry = dict(data)
             entry["id"] = mid
             entry["createdAt"] = entry.get("createdAt") or now
@@ -96,7 +96,7 @@ except Exception:
             entry = self._items[item.id]
             for k, v in data.items():
                 entry[k] = v
-            entry["updatedAt"] = datetime.datetime.utcnow()
+            entry["updatedAt"] = datetime.datetime.now(datetime.UTC)
             return _Obj(entry)
 
         async def delete(self, where: Dict[str, Any]) -> Optional[Any]:
@@ -178,7 +178,7 @@ except Exception:
         async def create(self, data: Dict[str, Any]) -> Any:
             import uuid, datetime
             mid = data.get("id") or str(uuid.uuid4())
-            now = datetime.datetime.utcnow()
+            now = datetime.datetime.now(datetime.UTC)
             entry = dict(data)
             entry["id"] = mid
             entry["createdAt"] = entry.get("createdAt") or now
@@ -194,7 +194,7 @@ except Exception:
             entry = self._items[item.id]
             for k, v in data.items():
                 entry[k] = v
-            entry["updatedAt"] = datetime.datetime.utcnow()
+            entry["updatedAt"] = datetime.datetime.now(datetime.UTC)
             return _Obj(entry)
 
         async def find_unique(self, where: Dict[str, Any]) -> Optional[Any]:

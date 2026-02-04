@@ -113,6 +113,41 @@ class EventBus:
         except Exception:
             pass
 
+    async def schedule_retry(self, mission_id: str, rc: int, base: float = 2.0, factor: float = 2.0, jitter: float | None = 0.5, max_delay: float = 300.0, max_retries: int | None = None) -> tuple[bool, float]:
+        try:
+            if max_retries is not None and rc > max_retries:
+                return False, 0.0
+            import time, random
+            delay = min(max_delay, base * (factor ** max(rc - 1, 0)))
+            if jitter is not None:
+                delay += random.uniform(-jitter, jitter)
+            sched = time.time() + max(0.0, delay)
+            await self.redis.zadd("mission:retry:zset", {mission_id: sched})
+            return True, delay
+        except Exception:
+            return False, 0.0
+
+    async def dequeue_due_retries(self, now_ts: float | None = None) -> list[str]:
+        try:
+            import time
+            now = now_ts or time.time()
+            mids = await self.redis.zrangebyscore("mission:retry:zset", min=0, max=now)
+            result = []
+            for mid in mids:
+                if isinstance(mid, bytes):
+                    mid = mid.decode()
+                result.append(mid)
+            return result
+        except Exception:
+            return []
+
+    async def clear_retry(self, mission_id: str):
+        try:
+            await self.redis.delete(f"mission:{mission_id}:retries")
+            await self.redis.zrem("mission:retry:zset", mission_id)
+        except Exception:
+            pass
+
     async def subscribe(self, channel: str, role: str = "general") -> AsyncGenerator[MessageEnvelope, None]:
         """
         Subscribe to a channel and yield parsed MessageEnvelopes.
