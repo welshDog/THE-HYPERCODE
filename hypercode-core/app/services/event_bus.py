@@ -74,6 +74,45 @@ class EventBus:
             logger.error(f"Failed to publish message to {channel}: {e}")
             raise
 
+    async def publish_stream(self, stream: str, message: MessageEnvelope, role: str = "general") -> str:
+        """
+        Publish to a Redis Stream for at-least-once delivery.
+        Returns entry id. Downstream consumers must XACK.
+        """
+        if not self._check_acl(role, stream, "publish"):
+            logger.warning(f"ACL Deny: Role '{role}' cannot publish to stream '{stream}'")
+            return ""
+        try:
+            data = message.model_dump(mode="json")
+            # Flatten payload for XADD
+            fields = {k: (json.dumps(v) if isinstance(v, (dict, list)) else str(v)) for k, v in data.items()}
+            entry_id = await self.redis.xadd(stream, fields)
+            return entry_id
+        except Exception as e:
+            logger.error(f"Failed to publish stream {stream}: {e}")
+            raise
+
+    async def ensure_consumer_group(self, stream: str, group: str) -> None:
+        try:
+            await self.redis.xgroup_create(stream, group, id="$", mkstream=True)
+        except Exception:
+            # Group may already exist
+            pass
+
+    async def read_group(self, stream: str, group: str, consumer: str, count: int = 10, block_ms: int = 1000):
+        try:
+            entries = await self.redis.xreadgroup(group, consumer, streams={stream: ">"}, count=count, block=block_ms)
+            return entries or []
+        except Exception as e:
+            logger.error(f"Failed to read group {group} on {stream}: {e}")
+            return []
+
+    async def ack(self, stream: str, group: str, entry_id: str):
+        try:
+            await self.redis.xack(stream, group, entry_id)
+        except Exception:
+            pass
+
     async def subscribe(self, channel: str, role: str = "general") -> AsyncGenerator[MessageEnvelope, None]:
         """
         Subscribe to a channel and yield parsed MessageEnvelopes.

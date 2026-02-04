@@ -1,0 +1,10 @@
+[project]
+name = "hypercode_engine"
+version = "0.0.1"
+description = "HyperCode language engine (skeleton)"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+hypercode = "hypercode_engine.cli:main"
+

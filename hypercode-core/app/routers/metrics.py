@@ -1,6 +1,8 @@
 from fastapi import APIRouter
 from app.core.db import db
 from pydantic import BaseModel
+import os
+import httpx
 
 router = APIRouter()
 
@@ -27,3 +29,26 @@ async def get_costs():
         "total_tokens": total_tokens,
         "by_model": {k: round(v, 6) for k, v in by_model.items()}
     }
+
+class AgentStreamSummary(BaseModel):
+    p50_ms: float
+    p95_ms: float
+    p99_ms: float
+
+@router.get("/agent_stream_summary", response_model=AgentStreamSummary)
+async def agent_stream_summary():
+    base = os.getenv("PROMETHEUS_URL", "http://prometheus:9090")
+    async with httpx.AsyncClient(timeout=3.0) as client:
+        async def q(expr: str) -> float:
+            r = await client.get(f"{base}/api/v1/query", params={"query": expr})
+            j = r.json()
+            try:
+                v = j["data"]["result"][0]["value"][1]
+                return float(v)
+            except Exception:
+                return 0.0
+
+        p50 = await q("job:agent_stream_latency_ms:hist_p50")
+        p95 = await q("job:agent_stream_latency_ms:hist_p95")
+        p99 = await q("job:agent_stream_latency_ms:hist_p99")
+        return {"p50_ms": p50, "p95_ms": p95, "p99_ms": p99}

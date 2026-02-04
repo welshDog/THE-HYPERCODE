@@ -4,7 +4,8 @@ import asyncio
 from typing import List, Optional
 import time
 import redis.asyncio as redis
-from prometheus_client import Counter, Histogram
+from prometheus_client import Counter, Histogram, Summary
+from os import getenv
 from app.core.config import get_settings
 from app.schemas.agent import AgentMetadata, AgentStatus, AgentRegistrationRequest
 from app.core.db import db
@@ -15,24 +16,43 @@ settings = get_settings()
 logger = logging.getLogger(__name__)
 
 # Prometheus metrics
-REGISTER_COUNT = Counter(
-    "agent_registry_register_total",
-    "Agent registry registration attempts",
-    ["result"],
+_env = settings.ENVIRONMENT
+_ver = getenv("SERVICE_VERSION", "2.0.0")
+AGENT_REGISTERED = Counter(
+    "agent_registered_total",
+    "Agent registered",
+    ["env", "version"],
+)
+AGENT_UPDATED = Counter(
+    "agent_updated_total",
+    "Agent updated",
+    ["env", "version"],
+)
+AGENT_STREAM_CLIENTS = Counter(
+    "agent_stream_clients_total",
+    "Agent stream clients connected",
+    ["env", "version"],
 )
 REGISTER_LATENCY = Histogram(
     "agent_registry_register_latency_seconds",
     "Agent registry registration latency (seconds)",
     buckets=(0.1, 0.5, 1.0, 2.0),
 )
-HEARTBEAT_COUNT = Counter(
-    "agent_registry_heartbeat_total",
-    "Agent heartbeat updates",
-)
 ERROR_COUNT = Counter(
     "agent_registry_errors_total",
     "Agent registry errors",
-    ["operation"],
+    ["operation", "env", "version"],
+)
+HEARTBEAT_COUNT = Counter(
+    "agent_heartbeat_total",
+    "Agent heartbeat updates",
+    ["env", "version"],
+)
+STREAM_LATENCY_MS = Histogram(
+    "agent_stream_latency_ms",
+    "Agent SSE stream latency (milliseconds)",
+    buckets=(50, 100, 200, 500, 1000, 2000),
+    labelnames=("method", "status", "env", "version"),
 )
 
 class AgentRegistry:
@@ -40,8 +60,10 @@ class AgentRegistry:
         self.redis = redis.from_url(settings.HYPERCODE_REDIS_URL)
         self.ttl = 60  # Agent expiration time in seconds
         self.pubsub_channel = "agents:watch"
+        self._env = _env
+        self._ver = _ver
 
-    async def register_agent(self, request: AgentRegistrationRequest) -> AgentMetadata:
+    async def register_agent(self, request: AgentRegistrationRequest):
         """
         Register a new agent or update existing one using idempotency.
         Priority: dedup_key (unique), otherwise fallback to role-based idempotency.
@@ -52,22 +74,48 @@ class AgentRegistry:
             existing_agent = None
             if request.dedup_key:
                 existing_agent = await db.agent.find_first(where={"dedupKey": request.dedup_key})
-            if not existing_agent:
+            else:
                 existing_agent = await db.agent.find_first(where={"role": request.role})
 
             if existing_agent:
-                # Update existing (role and id immutable)
+                # Prevent immutable role change
+                req_role = (request.role or "").strip().lower()
+                cur_role = (getattr(existing_agent, "role", "") or "").strip().lower()
+                if req_role != cur_role:
+                    from fastapi import HTTPException
+                    raise HTTPException(status_code=422, detail={
+                        "error": "immutable_field",
+                        "message": "dedup_key and role are immutable after creation"
+                    })
+                same = (
+                    existing_agent.name == request.name and
+                    existing_agent.role == request.role and
+                    existing_agent.version == request.version and
+                    existing_agent.capabilities == request.capabilities and
+                    existing_agent.topics == request.topics and
+                    existing_agent.healthUrl == request.health_url
+                )
+                if same:
+                    REGISTER_LATENCY.observe(time.monotonic() - start)
+                    return None, True
                 agent_id = existing_agent.id
-                if existing_agent.version != request.version:
-                    logger.info(
-                        f"Updating agent {request.role} from {existing_agent.version} to {request.version}"
-                    )
+                parts = (existing_agent.version or "0.1.0").split(".")
+                try:
+                    major, minor, patch = int(parts[0]), int(parts[1]), int(parts[2])
+                except Exception:
+                    major, minor, patch = 0, 1, 0
+                if request.dedup_key:
+                    minor += 1
+                    patch = 0
+                else:
+                    patch += 1
+                new_version = f"{major}.{minor}.{patch}"
 
                 updated_agent = await db.agent.update(
                     where={"id": agent_id},
                     data={
                         "name": request.name,
-                        "version": request.version,
+                        "version": new_version,
                         "capabilities": request.capabilities,
                         "topics": request.topics,
                         "healthUrl": request.health_url,
@@ -77,7 +125,7 @@ class AgentRegistry:
                     },
                 )
                 agent_data = AgentMetadata.model_validate(updated_agent)
-                REGISTER_COUNT.labels(result="update").inc()
+                AGENT_UPDATED.labels(_env, _ver).inc()
             else:
                 # Create new
                 agent_id = str(uuid.uuid4())
@@ -96,16 +144,16 @@ class AgentRegistry:
                     }
                 )
                 agent_data = AgentMetadata.model_validate(new_agent)
-                REGISTER_COUNT.labels(result="create").inc()
+                AGENT_REGISTERED.labels(_env, _ver).inc()
 
             # 2. Update Redis Cache & Notify
             await self._update_cache(agent_data)
             await self._publish_event("registered", agent_data)
 
             logger.info(f"Registered agent: {agent_data.name} ({agent_data.id})")
-            return agent_data
+            return agent_data, False
         except Exception as e:
-            ERROR_COUNT.labels(operation="register").inc()
+            ERROR_COUNT.labels("register", _env, _ver).inc()
             logger.error(f"Register agent failed: {e}")
             raise
         finally:
@@ -129,11 +177,15 @@ class AgentRegistry:
             # Update Cache
             agent_data = AgentMetadata.model_validate(agent)
             await self._update_cache(agent_data)
-            HEARTBEAT_COUNT.inc()
+            try:
+                await self.redis.set(f"agent:load:{agent_id}", str(load), ex=self.ttl)
+            except Exception:
+                pass
+            HEARTBEAT_COUNT.labels(self._env, self._ver).inc()
             return True
         except Exception as e:
             logger.error(f"Heartbeat failed for {agent_id}: {e}")
-            ERROR_COUNT.labels(operation="heartbeat").inc()
+            ERROR_COUNT.labels("heartbeat", self._env, self._ver).inc()
             return False
         finally:
             # Reuse register latency histogram for simplicity; separate if needed
@@ -164,25 +216,65 @@ class AgentRegistry:
 
     async def deregister_agent(self, agent_id: str):
         """Mark agent as offline and remove from cache."""
-        await db.agent.update(
-            where={"id": agent_id},
-            data={"status": AgentStatus.OFFLINE.value}
-        )
-        
-        await self.redis.delete(f"agent:{agent_id}")
-        await self._publish_event("deregistered", {"id": agent_id})
-        logger.info(f"Deregistered agent: {agent_id}")
+        start = time.monotonic()
+        try:
+            await db.agent.update(
+                where={"id": agent_id},
+                data={"status": AgentStatus.OFFLINE.value}
+            )
+            
+            await self.redis.delete(f"agent:{agent_id}")
+            await self._publish_event("deregistered", {"id": agent_id})
+            logger.info(f"Deregistered agent: {agent_id}")
+        except Exception as e:
+            logger.error(f"Deregister agent failed: {e}")
+            ERROR_COUNT.labels("deregister", self._env, self._ver).inc()
+        finally:
+            # Reuse register latency histogram for simplicity; separate if needed
+            REGISTER_LATENCY.observe(time.monotonic() - start)
 
     async def _update_cache(self, agent: AgentMetadata):
         key = f"agent:{agent.id}"
-        await self.redis.set(key, agent.model_dump_json(), ex=self.ttl)
+        if self.ttl and self.ttl > 0:
+            await self.redis.set(key, agent.model_dump_json(), ex=self.ttl)
+        else:
+            await self.redis.set(key, agent.model_dump_json())
+
+    async def get_load(self, agent_id: str) -> float:
+        try:
+            val = await self.redis.get(f"agent:load:{agent_id}")
+            if not val:
+                return 0.0
+            if isinstance(val, bytes):
+                val = val.decode()
+            return float(val)
+        except Exception:
+            return 0.0
 
     async def _publish_event(self, event_type: str, data: any):
         payload = {
             "event": event_type,
             "timestamp": datetime.utcnow().isoformat(),
-            "data": data.model_dump() if hasattr(data, "model_dump") else data
+            "data": data.model_dump(mode="json") if hasattr(data, "model_dump") else data
         }
         await self.redis.publish(self.pubsub_channel, json.dumps(payload))
+
+    async def check_timeouts(self):
+        now = datetime.utcnow()
+        agents = await db.agent.find_many()
+        for a in agents:
+            try:
+                last = getattr(a, "lastHeartbeat", now)
+                status = getattr(a, "status", AgentStatus.OFFLINE.value)
+                if status != AgentStatus.OFFLINE.value:
+                    if (now - last).total_seconds() > self.ttl:
+                        await db.agent.update(
+                            where={"id": a.id},
+                            data={"status": AgentStatus.OFFLINE.value}
+                        )
+                        await self.redis.delete(f"agent:{a.id}")
+                        await self._publish_event("timeout", {"id": a.id})
+            except Exception:
+                ERROR_COUNT.labels("timeout_check", self._env, self._ver).inc()
 
 agent_registry = AgentRegistry()

@@ -5,7 +5,7 @@ from main import app
 
 def test_sse_stream_endpoint_available():
     client = TestClient(app)
-    resp = client.get("/agents/stream")
+    resp = client.get("/agents/watch?one_shot=true")
     assert resp.status_code == 200
     assert resp.headers.get("content-type", "").startswith("text/event-stream")
 
@@ -39,5 +39,5 @@ def test_metrics_exposed():
     resp = client.get("/metrics")
     assert resp.status_code == 200
     text = resp.text
-    assert "agent_registry_register_total" in text
+    assert "agent_registered_total" in text
     assert "agent_registry_register_latency_seconds" in text

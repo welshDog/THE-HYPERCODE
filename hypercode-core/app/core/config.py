@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     API_KEY: Optional[str] = None # If None, auth is disabled (Dev mode)
     SENTRY_DSN: Optional[str] = None
     LOG_LEVEL: str = "INFO"
+    HYPERCODE_MEMORY_KEY: Optional[str] = None
     
     class Config:
         env_file = ".env"

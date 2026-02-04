@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel
 from app.core.config import get_settings
+from prometheus_client import Histogram
 
 settings = get_settings()
 
@@ -18,9 +19,17 @@ class KeyManager:
     def __init__(self):
         self.redis = redis.from_url(settings.HYPERCODE_REDIS_URL)
         self.active_keys_set = "api_keys:active"
+        self._latency = Histogram(
+            "key_manager_latency_seconds",
+            "Latency of key manager operations",
+            ("operation",),
+            buckets=(0.001, 0.005, 0.01, 0.05, 0.1, 0.5)
+        )
         
     async def generate_key(self, label: str = "default") -> str:
         """Generate a new API key and store it."""
+        import time
+        t0 = time.perf_counter()
         # Generate a secure random key
         key = f"hk_{secrets.token_urlsafe(32)}"
         
@@ -37,10 +46,13 @@ class KeyManager:
             await pipe.set(f"api_key:{key}:meta", metadata.model_dump_json())
             await pipe.execute()
             
+        self._latency.labels("generate").observe(time.perf_counter() - t0)
         return key
 
     async def revoke_key(self, key: str):
         """Revoke an API key."""
+        import time
+        t0 = time.perf_counter()
         async with self.redis.pipeline() as pipe:
             await pipe.srem(self.active_keys_set, key)
             # Mark as revoked in metadata (optional, for audit)
@@ -51,22 +63,30 @@ class KeyManager:
                 meta.revoked = True
                 await pipe.set(meta_key, meta.model_dump_json())
             await pipe.execute()
+        self._latency.labels("revoke").observe(time.perf_counter() - t0)
 
     async def is_valid(self, key: str) -> bool:
         """Check if a key is valid."""
+        import time
+        t0 = time.perf_counter()
         # 1. Check Redis Set (Fastest)
         is_active = await self.redis.sismember(self.active_keys_set, key)
         if is_active:
+            self._latency.labels("is_valid").observe(time.perf_counter() - t0)
             return True
             
         # 2. Fallback to Env Var (Migration/Bootstrap)
         if settings.API_KEY and key == settings.API_KEY:
+            self._latency.labels("is_valid").observe(time.perf_counter() - t0)
             return True
             
+        self._latency.labels("is_valid").observe(time.perf_counter() - t0)
         return False
 
     async def list_keys(self) -> List[ApiKeyMetadata]:
         """List all active keys."""
+        import time
+        t0 = time.perf_counter()
         keys = await self.redis.smembers(self.active_keys_set)
         results = []
         for key in keys:
@@ -75,6 +95,7 @@ class KeyManager:
             data = await self.redis.get(f"api_key:{key}:meta")
             if data:
                 results.append(ApiKeyMetadata.model_validate_json(data))
+        self._latency.labels("list").observe(time.perf_counter() - t0)
         return results
 
 key_manager = KeyManager()

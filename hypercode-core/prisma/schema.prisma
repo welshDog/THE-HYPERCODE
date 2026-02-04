@@ -22,13 +22,22 @@ model User {
 model Mission {
   id          String    @id @default(uuid())
   title       String
-  status      String    @default("pending") // pending, active, completed, failed
+  status      String    @default("pending") // queued, assigned, executing, verifying, completed, failed
+  agentId     String?
   userId      String
   user        User      @relation(fields: [userId], references: [id])
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+  retryCount  Int       @default(0)
+  maxRetries  Int       @default(3)
+  payload     Json?
+  metadata    Json?
   memories    Memory[]
   tokenUsages TokenUsage[]
+
+  @@index([status, createdAt])
+  @@index([agentId, status])
 }
 
 model Memory {
@@ -78,4 +87,19 @@ model Agent {
 
   @@index([role])
   @@index([status])
+}
+
+model AuditLog {
+  id            String   @id @default(uuid())
+  missionId     String
+  mission       Mission  @relation(fields: [missionId], references: [id])
+  transition    String
+  previousState String
+  newState      String
+  actor         String
+  timestamp     DateTime @default(now())
+  reason        String?
+  diff          Json?
+
+  @@index([missionId])
 }

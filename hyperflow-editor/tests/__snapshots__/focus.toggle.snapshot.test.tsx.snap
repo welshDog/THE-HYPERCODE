@@ -1,0 +1,149 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Focus Mode visuals > renders dark theme class 1`] = `
+<div>
+  <div
+    class="dark"
+  >
+    <div
+      style="display: grid; grid-template-columns: 1fr 360px; height: 100vh; transition: grid-template-columns 200ms ease;"
+    >
+      <div />
+      <div
+        style="border-left: 1px solid rgb(221, 221, 221); padding: 12px; overflow: hidden;"
+      >
+        <div
+          style="margin-bottom: 8px; font-weight: 600;"
+        >
+          Output
+        </div>
+        <pre
+          style="white-space: pre-wrap;"
+        />
+        <div
+          style="margin-top: 12px; color: rgb(102, 102, 102);"
+        >
+          Ctrl+Enter to run
+        </div>
+        <button
+          aria-pressed="false"
+          style="margin-top: 12px; padding: 8px 12px; border-radius: 8px; border: 1px solid rgb(136, 136, 136); background: rgb(255, 255, 255); color: rgb(17, 17, 17);"
+        >
+          Hold to speak (Ctrl+Space)
+        </button>
+        <div
+          aria-live="polite"
+          style="margin-top: 12px;"
+        >
+          <div
+            style="margin-bottom: 6px; font-weight: 600;"
+          >
+            Transcript
+          </div>
+          <ul />
+          <div
+            style="margin-top: 12px;"
+          >
+            <div
+              style="font-weight: 600;"
+            >
+              History
+            </div>
+            <ul
+              style="max-height: 120px; overflow: auto;"
+            />
+          </div>
+        </div>
+      </div>
+      <div
+        style="position: fixed; bottom: 8px; right: 8px; display: flex; gap: 12px; align-items: center;"
+      >
+        <button
+          aria-pressed="false"
+          style="padding: 6px 10px; border-radius: 6px; border: 1px solid rgb(221, 221, 221);"
+        >
+          Focus Mode
+        </button>
+        <span
+          style="font-size: 12px; color: rgb(102, 102, 102);"
+        >
+          Font x
+          1.00
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Focus Mode visuals > renders light theme 1`] = `
+<div>
+  <div
+    style="display: grid; grid-template-columns: 1fr 360px; height: 100vh; transition: grid-template-columns 200ms ease;"
+  >
+    <div />
+    <div
+      style="border-left: 1px solid rgb(221, 221, 221); padding: 12px; overflow: hidden;"
+    >
+      <div
+        style="margin-bottom: 8px; font-weight: 600;"
+      >
+        Output
+      </div>
+      <pre
+        style="white-space: pre-wrap;"
+      />
+      <div
+        style="margin-top: 12px; color: rgb(102, 102, 102);"
+      >
+        Ctrl+Enter to run
+      </div>
+      <button
+        aria-pressed="false"
+        style="margin-top: 12px; padding: 8px 12px; border-radius: 8px; border: 1px solid rgb(136, 136, 136); background: rgb(255, 255, 255); color: rgb(17, 17, 17);"
+      >
+        Hold to speak (Ctrl+Space)
+      </button>
+      <div
+        aria-live="polite"
+        style="margin-top: 12px;"
+      >
+        <div
+          style="margin-bottom: 6px; font-weight: 600;"
+        >
+          Transcript
+        </div>
+        <ul />
+        <div
+          style="margin-top: 12px;"
+        >
+          <div
+            style="font-weight: 600;"
+          >
+            History
+          </div>
+          <ul
+            style="max-height: 120px; overflow: auto;"
+          />
+        </div>
+      </div>
+    </div>
+    <div
+      style="position: fixed; bottom: 8px; right: 8px; display: flex; gap: 12px; align-items: center;"
+    >
+      <button
+        aria-pressed="false"
+        style="padding: 6px 10px; border-radius: 6px; border: 1px solid rgb(221, 221, 221);"
+      >
+        Focus Mode
+      </button>
+      <span
+        style="font-size: 12px; color: rgb(102, 102, 102);"
+      >
+        Font x
+        1.00
+      </span>
+    </div>
+  </div>
+</div>
+`;

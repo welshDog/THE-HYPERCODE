@@ -8,10 +8,12 @@ from main import app
 async def test_register_agent(async_client):
     payload = {
         "name": "Test Agent",
-        "description": "A unit test agent",
+        "role": "worker",
         "version": "0.1.0",
-        "endpoint": "http://localhost:5000",
-        "tags": ["test", "unit"]
+        "capabilities": ["compute"],
+        "topics": ["agent.events"],
+        "health_url": "http://localhost:5000/health",
+        "dedup_key": "00000000-0000-0000-0000-00000000TA"
     }
     response = await async_client.post("/agents/register", json=payload)
     assert response.status_code == 200
@@ -50,29 +52,8 @@ async def test_heartbeat(async_client):
     data = response.json()
     assert data["status"] == "busy"
 
-def test_websocket_connection_sync(async_client):
-    # We need to use TestClient for WebSockets if AsyncClient doesn't support it in this version
-    # Mixed async/sync test: we register via sync client or mock the registry
-    
+def test_sse_stream_endpoint_sync():
     client = TestClient(app)
-    
-    # 1. Register (Sync)
-    payload = {
-        "name": "WS Agent",
-        "description": "WS Test",
-        "version": "0.1.0",
-        "endpoint": "http://localhost:5000",
-        "tags": ["ws"]
-    }
-    reg_response = client.post("/agents/register", json=payload)
-    assert reg_response.status_code == 200
-    agent_id = reg_response.json()["id"]
-    
-    # 2. Connect via WebSocket
-    with client.websocket_connect(f"/agents/{agent_id}/channel") as websocket:
-        # 3. Send Ping
-        websocket.send_text("ping")
-        
-        # 4. Expect Pong
-        response = websocket.receive_text()
-        assert response == "pong"
+    resp = client.get("/agents/watch?one_shot=true")
+    assert resp.status_code == 200
+    assert resp.headers.get("content-type", "").startswith("text/event-stream")
