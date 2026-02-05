@@ -1,5 +1,5 @@
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.services.memory_service import MemoryService
 from app.schemas.memory import MemoryCreate, MemoryUpdate, MemorySearch
 
@@ -32,7 +32,7 @@ async def test_memory_crud_and_search():
 
 @pytest.mark.asyncio
 async def test_memory_cleanup_expired():
-    expire_time = datetime.utcnow() + timedelta(seconds=0.1)
+    expire_time = datetime.now(timezone.utc) + timedelta(seconds=0.1)
     m = await MemoryService.create_memory(MemoryCreate(
         content="To expire",
         type="short-term",

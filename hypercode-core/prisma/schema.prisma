@@ -35,6 +35,7 @@ model Mission {
   metadata    Json?
   memories    Memory[]
   tokenUsages TokenUsage[]
+  auditLogs   AuditLog[]
 
   @@index([status, createdAt])
   @@index([agentId, status])

@@ -1,7 +1,7 @@
 
 import secrets
 import redis.asyncio as redis
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from pydantic import BaseModel
 from app.core.config import get_settings
@@ -35,7 +35,7 @@ class KeyManager:
         
         metadata = ApiKeyMetadata(
             key=key,
-            created_at=datetime.utcnow().isoformat(),
+            created_at=datetime.now(timezone.utc).isoformat(),
             label=label
         )
         

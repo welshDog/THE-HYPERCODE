@@ -211,7 +211,7 @@ except Exception:
         async def create(self, data: Dict[str, Any]) -> Any:
             import uuid, datetime
             aid = data.get("id") or str(uuid.uuid4())
-            now = datetime.datetime.utcnow()
+            now = datetime.datetime.now(datetime.UTC)
             entry = dict(data)
             entry["id"] = aid
             entry["timestamp"] = entry.get("timestamp") or now

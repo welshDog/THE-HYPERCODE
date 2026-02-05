@@ -8,7 +8,7 @@ from app.schemas.agent import AgentMetadata
 from app.core.db import db
 from app.schemas.message import MessageEnvelope
 from prometheus_client import Counter, Histogram
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 import json
 import asyncio
@@ -52,7 +52,7 @@ class Orchestrator:
     async def submit(self, req: MissionRequest) -> MissionStatus:
         await self._ensure_redis()
         mid = str(uuid.uuid4())
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         data = {
             "id": mid,
             "title": req.title,
@@ -157,8 +157,11 @@ class Orchestrator:
                 }.get(a.status.value if hasattr(a.status, "value") else str(a.status), 0.5)
                 try:
                     last = getattr(a, "lastHeartbeat", None) or getattr(a, "createdAt", None)
-                    last_dt = last or datetime.utcnow()
-                    age = max((datetime.utcnow() - last_dt).total_seconds(), 0.0)
+                    last_dt = last or datetime.now(timezone.utc)
+                    if last_dt.tzinfo is None:
+                        last_dt = last_dt.replace(tzinfo=timezone.utc)
+                    now_dt = datetime.now(timezone.utc)
+                    age = max((now_dt - last_dt).total_seconds(), 0.0)
                     recency = max(0.0, 1.0 - min(age / 60.0, 1.0))
                 except Exception:
                     recency = 0.5
@@ -183,7 +186,7 @@ class Orchestrator:
                 await self.redis.hset(k, mapping={
                     "state": MissionState.ASSIGNED.value,
                     "agent_id": agent_id,
-                    "updated_at": datetime.utcnow().isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
                 })
                 try:
                     await db.mission.update(
@@ -230,7 +233,7 @@ class Orchestrator:
             await self.redis.hset(k, mapping={
                 "state": MissionState.ASSIGNED.value,
                 "agent_id": agent_id,
-                "updated_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             })
 
             # Persistence & Audit
@@ -286,7 +289,7 @@ class Orchestrator:
         from_state = v.get(b"state", b"").decode()
         await self.redis.hset(k, mapping={
             "state": to_state.value,
-            "updated_at": datetime.utcnow().isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
         })
 
         try:

@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 from main import app
 
 
-def test_duplicate_payload_returns_204():
+def test_duplicate_payload_returns_200():
     client = TestClient(app)
     payload = {
         "name": "Agent A",
@@ -17,7 +17,7 @@ def test_duplicate_payload_returns_204():
     r1 = client.post("/agents/register", json=payload)
     assert r1.status_code == 200
     r2 = client.post("/agents/register", json=payload)
-    assert r2.status_code == 204
+    assert r2.status_code == 200
 
 
 def test_immutable_role_change_rejected_422():

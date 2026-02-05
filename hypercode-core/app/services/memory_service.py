@@ -1,6 +1,6 @@
 import structlog
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from app.core.db import db
 from app.core.config import get_settings
 import os, base64
@@ -194,7 +194,7 @@ class MemoryService:
     async def cleanup_expired_memories() -> int:
         import time
         t0 = time.perf_counter()
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         result = await db.memory.delete_many(
             where={
                 "expiresAt": {

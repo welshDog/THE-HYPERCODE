@@ -15,6 +15,7 @@ import asyncio
 import json
 import time
 import random
+from datetime import datetime, timezone
 
 # OpenTelemetry Imports
 from opentelemetry import trace
@@ -169,7 +170,7 @@ async def lifespan(app: FastAPI):
                                 await event_bus.redis.hset(key, mapping={
                                     "state": "queued",
                                     "agent_id": "",
-                                    "updated_at": datetime.utcnow().isoformat(),
+                                    "updated_at": datetime.now(timezone.utc).isoformat(),
                                 })
                             except Exception:
                                 pass

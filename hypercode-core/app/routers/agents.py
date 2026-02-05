@@ -67,8 +67,6 @@ async def get_agents():
 @router.post("/register", response_model=AgentMetadata)
 async def register_agent(request: AgentRegistrationRequest):
     data, no_change = await agent_registry.register_agent(request)
-    if no_change:
-        return Response(status_code=204)
     return data
 
 @router.post("/heartbeat")

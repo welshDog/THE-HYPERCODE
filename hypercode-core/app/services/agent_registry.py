@@ -9,7 +9,7 @@ from os import getenv
 from app.core.config import get_settings
 from app.schemas.agent import AgentMetadata, AgentStatus, AgentRegistrationRequest
 from app.core.db import db
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 settings = get_settings()
@@ -97,7 +97,8 @@ class AgentRegistry:
                 )
                 if same:
                     REGISTER_LATENCY.observe(time.monotonic() - start)
-                    return None, True
+                    agent_data = AgentMetadata.model_validate(existing_agent)
+                    return agent_data, True
                 agent_id = existing_agent.id
                 parts = (existing_agent.version or "0.1.0").split(".")
                 try:
@@ -120,7 +121,7 @@ class AgentRegistry:
                         "topics": request.topics,
                         "healthUrl": request.health_url,
                         "status": AgentStatus.ACTIVE.value,
-                        "lastHeartbeat": datetime.utcnow(),
+                        "lastHeartbeat": datetime.now(timezone.utc),
                         # Preserve role and dedupKey
                     },
                 )
@@ -139,7 +140,7 @@ class AgentRegistry:
                         "topics": request.topics,
                         "healthUrl": request.health_url,
                         "status": AgentStatus.ACTIVE.value,
-                        "lastHeartbeat": datetime.utcnow(),
+                        "lastHeartbeat": datetime.now(timezone.utc),
                         "dedupKey": request.dedup_key or str(uuid.uuid4()),
                     }
                 )
@@ -168,7 +169,7 @@ class AgentRegistry:
                 where={"id": agent_id},
                 data={
                     "status": status.value,
-                    "lastHeartbeat": datetime.utcnow()
+                    "lastHeartbeat": datetime.now(timezone.utc)
                 }
             )
             if not agent:
@@ -254,17 +255,19 @@ class AgentRegistry:
     async def _publish_event(self, event_type: str, data: any):
         payload = {
             "event": event_type,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "data": data.model_dump(mode="json") if hasattr(data, "model_dump") else data
         }
         await self.redis.publish(self.pubsub_channel, json.dumps(payload))
 
     async def check_timeouts(self):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         agents = await db.agent.find_many()
         for a in agents:
             try:
                 last = getattr(a, "lastHeartbeat", now)
+                if last.tzinfo is None:
+                    last = last.replace(tzinfo=timezone.utc)
                 status = getattr(a, "status", AgentStatus.OFFLINE.value)
                 if status != AgentStatus.OFFLINE.value:
                     if (now - last).total_seconds() > self.ttl:
