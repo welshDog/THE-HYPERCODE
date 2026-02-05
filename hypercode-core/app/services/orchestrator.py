@@ -10,9 +10,11 @@ from app.schemas.message import MessageEnvelope
 from prometheus_client import Counter, Histogram
 from datetime import datetime, timezone
 from typing import List, Dict, Any
+from pydantic import BaseModel, Field
 import uuid
 import json
 import asyncio
+import os
 
 logger = structlog.get_logger()
 settings = get_settings()
@@ -27,6 +29,12 @@ MISSION_STATE_DURATION = Histogram(
     "Mission state duration",
     ("state",),
     buckets=(0.01, 0.1, 0.5, 1.0, 2.0, 5.0)
+)
+AUDIT_RETRIEVE_LATENCY = Histogram(
+    "audit_retrieve_latency_seconds",
+    "Latency of audit retrieval",
+    ("status",),
+    buckets=(0.001, 0.005, 0.01, 0.05, 0.1)
 )
 
 class Orchestrator:
@@ -403,22 +411,33 @@ class Orchestrator:
         return [MissionStatus.model_validate(i) for i in items]
 
     async def audit(self, mission_id: str) -> List[Dict[str, Any]]:
+        tries = 0
+        import time
+        t0 = time.perf_counter()
+        while tries < 3:
+            try:
+                rows = await db.auditlog.find_many(where={"missionId": mission_id}, order={"timestamp": "asc"})
+                AUDIT_RETRIEVE_LATENCY.labels("ok").observe(time.perf_counter() - t0)
+                return [
+                    {
+                        "id": getattr(r, "id", None),
+                        "missionId": getattr(r, "missionId", None),
+                        "transition": getattr(r, "transition", None),
+                        "previousState": getattr(r, "previousState", None),
+                        "newState": getattr(r, "newState", None),
+                        "actor": getattr(r, "actor", None),
+                        "reason": getattr(r, "reason", None),
+                        "timestamp": getattr(r, "timestamp", None),
+                    }
+                for r in rows]
+            except Exception:
+                tries += 1
+                await asyncio.sleep(min(0.05 * (2 ** tries), 0.5))
         try:
-            rows = await db.auditlog.find_many(where={"missionId": mission_id}, order={"timestamp": "asc"})
-            return [
-                {
-                    "id": getattr(r, "id", None),
-                    "missionId": getattr(r, "missionId", None),
-                    "transition": getattr(r, "transition", None),
-                    "previousState": getattr(r, "previousState", None),
-                    "newState": getattr(r, "newState", None),
-                    "actor": getattr(r, "actor", None),
-                    "reason": getattr(r, "reason", None),
-                    "timestamp": getattr(r, "timestamp", None),
-                }
-            for r in rows]
+            AUDIT_RETRIEVE_LATENCY.labels("error").observe(time.perf_counter() - t0)
         except Exception:
-            return []
+            pass
+        return []
 
     async def approve(self, mission_id: str) -> MissionStatus | None:
         await self._ensure_redis()
@@ -451,5 +470,43 @@ class Orchestrator:
             "created_at": datetime.fromisoformat(mv[b"created_at"].decode()),
             "updated_at": datetime.fromisoformat(mv[b"updated_at"].decode()),
         })
+
+    async def submit_report(self, mission_id: str, agent_id: str, report: Dict[str, Any]) -> Dict[str, Any]:
+        class AuditEntry(BaseModel):
+            missionId: str = Field(min_length=1)
+            transition: str = Field(min_length=1)
+            previousState: str = Field(min_length=1)
+            newState: str = Field(min_length=1)
+            actor: str = Field(min_length=1)
+            reason: str | None = None
+        try:
+            root = os.getcwd()
+            out_dir = os.path.join(root, "reports")
+            os.makedirs(out_dir, exist_ok=True)
+            ts = datetime.now(timezone.utc).isoformat().replace(":", "-")
+            fname = f"health_check_{agent_id}_{ts}.json"
+            fpath = os.path.join(out_dir, fname)
+            with open(fpath, "w", encoding="utf-8") as f:
+                json.dump(report, f, ensure_ascii=False, indent=2)
+            payload = AuditEntry(
+                missionId=mission_id,
+                transition="report",
+                previousState="n/a",
+                newState="n/a",
+                actor=agent_id,
+                reason="Health check report submitted",
+            ).model_dump()
+            tries = 0
+            while tries < 3:
+                try:
+                    await db.auditlog.create(payload)
+                    break
+                except Exception:
+                    tries += 1
+                    await asyncio.sleep(min(0.05 * (2 ** tries), 0.5))
+            return {"ok": True, "path": fpath}
+        except Exception as e:
+            logger.error(f"Report submit failed for mission {mission_id}: {e}")
+            return {"ok": False, "error": str(e)}
 
 orchestrator = Orchestrator()

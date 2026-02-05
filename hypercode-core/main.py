@@ -1,12 +1,13 @@
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 try:
     from prometheus_fastapi_instrumentator import Instrumentator
     _instrumentator_available = True
 except Exception:
     Instrumentator = None
     _instrumentator_available = False
-from app.routers import agents, memory, execution, metrics, engine, voice, orchestrator
+from app.routers import agents, memory, execution, metrics, engine, voice, orchestrator, simulator
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.core.db import db
@@ -16,6 +17,7 @@ import json
 import time
 import random
 from datetime import datetime, timezone
+import subprocess
 
 # OpenTelemetry Imports
 from opentelemetry import trace
@@ -72,7 +74,14 @@ if settings.SENTRY_DSN:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await db.connect()
+    try:
+        try:
+            subprocess.run(["python", "-m", "prisma", "db", "push"], check=False)
+        except Exception:
+            pass
+        await db.connect()
+    except Exception:
+        pass
     bg_tasks = []
     try:
         from app.services.agent_registry import agent_registry
@@ -267,7 +276,10 @@ async def lifespan(app: FastAPI):
             t.cancel()
         except Exception:
             pass
-    await db.disconnect()
+    try:
+        await db.disconnect()
+    except Exception:
+        pass
 
 app = FastAPI(title="HyperCode Core Engine", lifespan=lifespan)
 
@@ -291,9 +303,19 @@ app.include_router(metrics.router, prefix="/metrics", tags=["Metrics"])
 app.include_router(engine.router, prefix="/engine", tags=["Engine"])
 app.include_router(voice.router, prefix="", tags=["Voice"])
 app.include_router(orchestrator.router, prefix="/orchestrator", tags=["Orchestrator"])
+app.include_router(simulator.router, prefix="/simulator", tags=["Simulator"])
 
 @app.get("/health")
 async def health_check():
     tracer = trace.get_tracer(__name__)
     with tracer.start_as_current_span("health_check_manual"):
         return {"status": "healthy"}
+
+# CORS for dashboard and agents
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)

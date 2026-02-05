@@ -32,6 +32,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     libatomic1 \
+    wget \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -m appuser
 
@@ -41,15 +42,18 @@ COPY . .
 
 RUN chown -R appuser:appuser /app /home/appuser
 
-USER appuser
+# Run as root in runtime to avoid prisma cache permission issues in demo
+# For production, prefer running as non-root and set prisma cache dir appropriately
+USER root
 
-ENV PATH=/home/appuser/.local/bin:$PATH
+ENV PATH=/home/appuser/.local/bin:$PATH \
+    PYTHONPATH=/home/appuser/.local/lib/python3.11/site-packages
 
-RUN prisma generate
+# Prisma client already generated in builder stage
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=5s --retries=5 \
+HEALTHCHECK --interval=30s --timeout=5s --retries=5 --start-period=20s \
     CMD curl -sf http://localhost:8000/health || exit 1
 
 CMD uvicorn main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS}
