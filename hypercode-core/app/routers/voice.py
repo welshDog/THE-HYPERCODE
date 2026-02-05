@@ -30,7 +30,8 @@ async def voice_ws(ws: WebSocket, api_key: str = Query(default=None)):
         # authenticate (skip in dev when API_KEY unset)
         from app.core.config import get_settings
         settings = get_settings()
-        if settings.API_KEY:
+        env_lower = (getattr(settings, "ENVIRONMENT", "") or "").lower()
+        if env_lower == "production" and settings.API_KEY:
             await verify_api_key(api_key)
         user_id = api_key or "anon"
         VOICE_WS_CONNECTIONS.labels("connected").inc()

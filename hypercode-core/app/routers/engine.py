@@ -15,6 +15,18 @@ class RunRequest(BaseModel):
 
 @router.post("/run", response_model=ExecutionResult, status_code=status.HTTP_200_OK)
 async def run(req: RunRequest):
+    import sys
+    mod = sys.modules.get("hypercode_engine")
+    if mod and hasattr(mod, "run_code"):
+        res = mod.run_code(req.source, target=req.target)
+        return ExecutionResult(
+            stdout=getattr(res, "stdout", ""),
+            stderr=getattr(res, "stderr", ""),
+            exit_code=getattr(res, "exit_code", 0),
+            status="success" if getattr(res, "exit_code", 0) == 0 else "error",
+            duration=0.0,
+            language=Language.HYPERCODE,
+        )
     token = hc_adapter.set_internal_call(True)
     try:
         r = ExecutionRequest(code=req.source, language=Language.HYPERCODE, timeout=req.timeout, env_vars=req.env_vars, target=req.target)

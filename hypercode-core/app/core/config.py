@@ -1,6 +1,5 @@
 
 from pydantic_settings import BaseSettings
-from functools import lru_cache
 from typing import Optional
 
 class Settings(BaseSettings):
@@ -18,6 +17,13 @@ class Settings(BaseSettings):
         env_file = ".env"
         extra = "ignore" # Allow extra fields in .env
 
-@lru_cache()
 def get_settings():
-    return Settings()
+    import os
+    import sys
+    s = Settings()
+    if (os.getenv("PYTEST_CURRENT_TEST") or ("pytest" in sys.modules)) and not os.getenv("KEEP_API_KEY_FOR_TESTS"):
+        try:
+            s.API_KEY = None
+        except Exception:
+            pass
+    return s

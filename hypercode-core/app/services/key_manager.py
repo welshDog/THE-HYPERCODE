@@ -76,7 +76,10 @@ class KeyManager:
             return True
             
         # 2. Fallback to Env Var (Migration/Bootstrap)
-        if settings.API_KEY and key == settings.API_KEY:
+        import os
+        s = get_settings()
+        env_key = os.getenv("API_KEY") or s.API_KEY
+        if env_key and key == env_key:
             self._latency.labels("is_valid").observe(time.perf_counter() - t0)
             return True
             

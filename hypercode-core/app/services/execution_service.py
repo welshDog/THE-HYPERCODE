@@ -17,10 +17,35 @@ class ExecutionService:
         
         try:
             if request.language == Language.HYPERCODE:
-                stdout, stderr, exit_code, _ = await run_hypercode(
-                    request.code, timeout=request.timeout, env=request.env_vars, target=request.target
-                )
-                status = "success" if exit_code == 0 else ("timeout" if exit_code == -1 and "timed out" in stderr.lower() else "error")
+                if request.target:
+                    cmd, args = ExecutionService._build_command(request)
+                    process = await asyncio.create_subprocess_exec(
+                        cmd, *args,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE,
+                        env=request.env_vars
+                    )
+                    try:
+                        stdout_data, stderr_data = await asyncio.wait_for(
+                            process.communicate(), 
+                            timeout=request.timeout
+                        )
+                        stdout = stdout_data.decode().strip()
+                        stderr = stderr_data.decode().strip()
+                        exit_code = process.returncode
+                        status = "success" if exit_code == 0 else "error"
+                    except asyncio.TimeoutError:
+                        process.kill()
+                        stdout = ""
+                        stderr = "Execution timed out"
+                        exit_code = -1
+                        status = "timeout"
+                        logger.warning("execution_timeout", timeout=request.timeout)
+                else:
+                    stdout, stderr, exit_code, _ = await run_hypercode(
+                        request.code, timeout=request.timeout, env=request.env_vars, target=request.target
+                    )
+                    status = "success" if exit_code == 0 else ("timeout" if exit_code == -1 and "timed out" in stderr.lower() else "error")
             else:
                 cmd, args = ExecutionService._build_command(request)
                 process = await asyncio.create_subprocess_exec(
@@ -72,7 +97,15 @@ class ExecutionService:
         if request.language == Language.PYTHON:
             return "python", ["-c", request.code]
         elif request.language in [Language.SHELL, Language.BASH]:
-            return "bash", ["-c", request.code]
+            code = request.code.strip()
+            if code.startswith("python -c"):
+                rest = code[len("python -c"):].strip()
+                if rest.startswith("\"") and rest.endswith("\""):
+                    rest = rest[1:-1]
+                if rest.startswith("'") and rest.endswith("'"):
+                    rest = rest[1:-1]
+                return "python", ["-c", rest]
+            return "bash", ["-c", code]
         elif request.language == Language.HYPERCODE:
             args = ["-m", "app.engine.cli", "eval", "-e", request.code]
             if request.target:

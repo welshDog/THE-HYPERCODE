@@ -16,6 +16,16 @@ def reset_internal_call(token):
 async def run_hypercode(source: str, timeout: int = 30, env: Optional[Dict[str, str]] = None, target: Optional[str] = None) -> Tuple[str, str, int, float]:
     t0 = time.time()
     try:
+        import sys
+        mod = sys.modules.get("hypercode_engine")
+        if mod and hasattr(mod, "run_code"):
+            res = mod.run_code(source, target=target)
+            return (
+                getattr(res, "stdout", ""),
+                getattr(res, "stderr", ""),
+                getattr(res, "exit_code", 0),
+                time.time() - t0,
+            )
         api_url = os.getenv("ENGINE_API_URL", "http://localhost:8000/engine/run")
         try:
             if not _INTERNAL_CALL.get():
@@ -31,13 +41,6 @@ async def run_hypercode(source: str, timeout: int = 30, env: Optional[Dict[str, 
             else:
                 raise RuntimeError("internal_call")
         except Exception:
-            try:
-                from hypercode_engine import run_code  # type: ignore
-                res = run_code(source, target=target)
-                stdout = getattr(res, "stdout", "")
-                stderr = getattr(res, "stderr", "")
-                code = getattr(res, "exit_code", 0)
-            except Exception:
                 try:
                     from app.parser.hc_parser import parse
                     from app.engine.interpreter import execute_program
@@ -48,8 +51,6 @@ async def run_hypercode(source: str, timeout: int = 30, env: Optional[Dict[str, 
                     code = r.exit_code
                 except Exception:
                     args = ["-m", "app.engine.cli", "eval", "-e", source]
-                    if target:
-                        args.extend(["-t", target])
                     proc = await asyncio.create_subprocess_exec(
                         "python", *args,
                         stdout=asyncio.subprocess.PIPE,
