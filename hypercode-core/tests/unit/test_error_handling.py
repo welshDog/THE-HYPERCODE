@@ -1,5 +1,8 @@
 from fastapi.testclient import TestClient
 from main import app
+import pytest
+
+pytestmark = pytest.mark.experimental
 
 def test_agent_register_role_change_422():
     client = TestClient(app)

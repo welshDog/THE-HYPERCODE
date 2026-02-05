@@ -204,6 +204,29 @@ except Exception:
                     return _Obj(item)
             return None
 
+        async def find_many(self, where: Optional[Dict[str, Any]] = None, take: Optional[int] = None, skip: int = 0, order: Optional[Dict[str, Any]] = None) -> List[Any]:
+            items = list(self._items.values())
+            if where:
+                def matches(entry):
+                    for k, cond in where.items():
+                        v = entry.get(k)
+                        if isinstance(cond, dict) and "not" in cond:
+                            if v == cond["not"]:
+                                return False
+                        else:
+                            if v != cond:
+                                return False
+                    return True
+                items = [e for e in items if matches(e)]
+            if order and "createdAt" in order:
+                reverse = order["createdAt"] == "desc"
+                items.sort(key=lambda x: x.get("createdAt"), reverse=reverse)
+            if skip:
+                items = items[skip:]
+            if take is not None:
+                items = items[:take]
+            return [_Obj(v) for v in items]
+
     class _AuditLogModel:
         def __init__(self):
             self._items: Dict[str, Dict[str, Any]] = {}
@@ -217,6 +240,24 @@ except Exception:
             entry["timestamp"] = entry.get("timestamp") or now
             self._items[aid] = entry
             return _Obj(self._items[aid])
+
+        async def find_many(self, where: Optional[Dict[str, Any]] = None, order: Optional[Dict[str, Any]] = None, take: Optional[int] = None, skip: int = 0) -> List[Any]:
+            items = list(self._items.values())
+            if where:
+                def matches(entry):
+                    for k, v in where.items():
+                        if entry.get(k) != v:
+                            return False
+                    return True
+                items = [e for e in items if matches(e)]
+            if order and "timestamp" in order:
+                reverse = order["timestamp"] == "desc"
+                items.sort(key=lambda x: x.get("timestamp"), reverse=reverse)
+            if skip:
+                items = items[skip:]
+            if take is not None:
+                items = items[:take]
+            return [_Obj(v) for v in items]
 
     class _Obj:
         def __init__(self, data: Dict[str, Any]):

@@ -44,7 +44,26 @@ async def fail(mission_id: str):
         raise HTTPException(status_code=404, detail="not found")
     return res
 
-@router.get("/{mission_id}", response_model=MissionStatus, dependencies=[Security(get_current_user, scopes=["mission:read"])])
+@router.get("/list", dependencies=[Security(get_current_user, scopes=["mission:read"])])
+async def list_missions(limit: int = 10):
+    items = await orchestrator.list(limit=limit)
+    return items
+
+@router.get("/{mission_id}/audit", dependencies=[Security(get_current_user, scopes=["mission:read"])])
+async def get_audit(mission_id: str):
+    rows = await orchestrator.audit(mission_id)
+    if rows is None:
+        raise HTTPException(status_code=404, detail="not found")
+    return rows
+
+@router.post("/{mission_id}/approve", response_model=MissionStatus, dependencies=[Security(get_current_user, scopes=["mission:write"])])
+async def approve(mission_id: str):
+    res = await orchestrator.approve(mission_id)
+    if not res:
+        raise HTTPException(status_code=404, detail="not found")
+    return res
+
+@router.get("/by-id/{mission_id}", response_model=MissionStatus, dependencies=[Security(get_current_user, scopes=["mission:read"])])
 async def get_status(mission_id: str):
     res = await orchestrator.get(mission_id)
     if not res:

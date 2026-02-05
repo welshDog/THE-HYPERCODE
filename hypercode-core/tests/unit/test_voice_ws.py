@@ -5,6 +5,8 @@ from fastapi.testclient import TestClient
 from app.core.config import get_settings
 from main import app
 
+pytestmark = pytest.mark.experimental
+
 
 client = TestClient(app)
 
@@ -27,4 +29,3 @@ def test_voice_ws_rate_limit():
             ws.send_text(json.dumps({"text": "print('x')"}))
             data = ws.receive_json()
             assert data["stdout"].strip() == "x"
-

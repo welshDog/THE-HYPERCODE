@@ -4,6 +4,8 @@ import pytest
 from fastapi.testclient import TestClient
 from main import app
 
+pytestmark = pytest.mark.experimental
+
 def test_adapter_api_path(monkeypatch):
     m = types.ModuleType("hypercode_engine")
     class Res:

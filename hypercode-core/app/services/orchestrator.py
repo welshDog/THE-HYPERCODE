@@ -9,6 +9,7 @@ from app.core.db import db
 from app.schemas.message import MessageEnvelope
 from prometheus_client import Counter, Histogram
 from datetime import datetime, timezone
+from typing import List, Dict, Any
 import uuid
 import json
 import asyncio
@@ -375,6 +376,80 @@ class Orchestrator:
             "agent_id": v[b"agent_id"].decode() or None,
             "created_at": datetime.fromisoformat(v[b"created_at"].decode()),
             "updated_at": datetime.fromisoformat(v[b"updated_at"].decode()),
+        })
+
+    async def list(self, limit: int = 10) -> List[MissionStatus]:
+        await self._ensure_redis()
+        keys = await self.redis.keys("mission:*")
+        items = []
+        for k in keys:
+            v = await self.redis.hgetall(k)
+            if not v:
+                continue
+            try:
+                items.append({
+                    "id": v[b"id"].decode(),
+                    "title": v[b"title"].decode(),
+                    "state": MissionState(v[b"state"].decode()),
+                    "priority": int(v[b"priority"].decode()),
+                    "agent_id": v.get(b"agent_id", b"").decode() or None,
+                    "created_at": datetime.fromisoformat(v[b"created_at"].decode()),
+                    "updated_at": datetime.fromisoformat(v[b"updated_at"].decode()),
+                })
+            except Exception:
+                continue
+        items.sort(key=lambda x: x["created_at"], reverse=True)
+        items = items[:limit]
+        return [MissionStatus.model_validate(i) for i in items]
+
+    async def audit(self, mission_id: str) -> List[Dict[str, Any]]:
+        try:
+            rows = await db.auditlog.find_many(where={"missionId": mission_id}, order={"timestamp": "asc"})
+            return [
+                {
+                    "id": getattr(r, "id", None),
+                    "missionId": getattr(r, "missionId", None),
+                    "transition": getattr(r, "transition", None),
+                    "previousState": getattr(r, "previousState", None),
+                    "newState": getattr(r, "newState", None),
+                    "actor": getattr(r, "actor", None),
+                    "reason": getattr(r, "reason", None),
+                    "timestamp": getattr(r, "timestamp", None),
+                }
+            for r in rows]
+        except Exception:
+            return []
+
+    async def approve(self, mission_id: str) -> MissionStatus | None:
+        await self._ensure_redis()
+        k = await self._key(mission_id)
+        v = await self.redis.hgetall(k)
+        if not v:
+            return None
+        try:
+            await self.redis.hset(k, mapping={"approved": "1", "updated_at": datetime.now(timezone.utc).isoformat()})
+        except Exception:
+            pass
+        try:
+            await db.auditlog.create({
+                "missionId": mission_id,
+                "transition": "approve",
+                "previousState": v.get(b"state", b"").decode(),
+                "newState": v.get(b"state", b"").decode(),
+                "actor": "manager",
+                "reason": "Approval",
+            })
+        except Exception:
+            pass
+        mv = await self.redis.hgetall(k)
+        return MissionStatus.model_validate({
+            "id": mv[b"id"].decode(),
+            "title": mv[b"title"].decode(),
+            "state": MissionState(mv[b"state"].decode()),
+            "priority": int(mv[b"priority"].decode()),
+            "agent_id": mv[b"agent_id"].decode() or None,
+            "created_at": datetime.fromisoformat(mv[b"created_at"].decode()),
+            "updated_at": datetime.fromisoformat(mv[b"updated_at"].decode()),
         })
 
 orchestrator = Orchestrator()

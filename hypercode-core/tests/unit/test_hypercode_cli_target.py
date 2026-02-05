@@ -1,5 +1,6 @@
 import pytest
 import asyncio
+pytestmark = pytest.mark.experimental
 
 from app.services.execution_service import ExecutionService
 from app.schemas.execution import ExecutionRequest, Language
@@ -34,4 +35,3 @@ async def test_cli_includes_target_flag(monkeypatch):
     assert cmd == "python"
     assert "-t" in args
     assert "python" in args
-

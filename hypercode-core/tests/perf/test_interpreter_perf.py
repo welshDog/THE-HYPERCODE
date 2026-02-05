@@ -1,7 +1,10 @@
 import time
+import pytest
 from app.parser.hc_parser import parse
 from app.engine.interpreter import execute_program
 
+
+pytestmark = pytest.mark.experimental
 
 def test_perf_simple_loop_under_threshold():
     code = """
@@ -15,4 +18,3 @@ while x < 1000:
     dt = time.time() - t0
     assert r.exit_code == 0
     assert dt < 0.5
-
