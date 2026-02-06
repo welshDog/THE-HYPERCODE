@@ -275,6 +275,7 @@ except Exception:  # pragma: no cover
 
         async def find_many(self, where: Optional[Dict[str, Any]] = None) -> List[Any]:
             items = list(self._items.values())
+            # Basic filter support if needed, currently metrics.py calls find_many() with no args
             return [_Obj(v) for v in items]
 
     class _Obj:
