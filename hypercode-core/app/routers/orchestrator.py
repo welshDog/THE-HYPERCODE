@@ -2,8 +2,22 @@ from fastapi import APIRouter, HTTPException, Security, Body
 from app.schemas.mission import MissionRequest, MissionStatus
 from app.services.orchestrator import orchestrator
 from app.core.auth import get_current_user
+from app.services.llm_service import llm_service
 
 router = APIRouter()
+
+@router.get("/llm/health", dependencies=[Security(get_current_user, scopes=["mission:read"])])
+async def llm_health_check():
+    """Check LLM service health"""
+    return await llm_service.health_check()
+
+@router.post("/llm/generate", dependencies=[Security(get_current_user, scopes=["mission:write"])])
+async def llm_generate(prompt: str = Body(..., max_length=4096)):
+    """Test LLM generation"""
+    response = await llm_service.generate(prompt)
+    if response is None:
+        raise HTTPException(status_code=503, detail="LLM generation failed or disabled")
+    return {"prompt": prompt, "response": response}
 
 @router.post("/mission", response_model=MissionStatus, dependencies=[Security(get_current_user, scopes=["mission:write"])])
 async def submit_mission(req: MissionRequest):

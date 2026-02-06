@@ -3,6 +3,7 @@ import * as monaco from "monaco-editor"
 import { setupHypercodeLanguage, applyErrorsToModel } from './hypercodeLang'
 import { parse as parseHC } from './hcParser'
 import { createMemory, setupQueueFlush } from './memoryClient'
+import HyperLayout from './components/HyperLayout'
 
 export default function App() {
   const el = useRef<HTMLDivElement | null>(null)
@@ -18,8 +19,13 @@ export default function App() {
     const editor = monaco.editor.create(el.current as HTMLDivElement, {
       value: 'print "Hello HC"',
       language: "hypercode",
-      theme: "hypercode-light",
-      automaticLayout: true
+      theme: "vs-dark", // Changed to vs-dark for better contrast with new theme
+      automaticLayout: true,
+      minimap: { enabled: false },
+      scrollBeyondLastLine: false,
+      fontSize: 14,
+      fontFamily: "'Courier New', monospace",
+      padding: { top: 16, bottom: 16 }
     })
     editorRef.current = editor
     const onKey = editor.onKeyDown((k: monaco.IKeyboardEvent) => {
@@ -98,35 +104,46 @@ export default function App() {
     })
   }
   return (
-    <div style={{ display: "grid", gridTemplateColumns: focusMode ? "1fr 0px" : "1fr 360px", height: "100vh", transition: 'grid-template-columns 200ms ease' }}>
-      <div ref={el} />
-      <div style={{ borderLeft: "1px solid #ddd", padding: 12, overflow: 'hidden' }}>
-        <div style={{ marginBottom: 8, fontWeight: 600 }}>Output</div>
-        <pre style={{ whiteSpace: "pre-wrap" }}>{out}</pre>
-        <div style={{ marginTop: 12, color: "#666" }}>Ctrl+Enter to run</div>
-        <VoiceButton onTranscript={(t, c) => setTranscripts((prev) => [{ t, c }, ...prev])} />
-        <div aria-live="polite" style={{ marginTop: 12 }}>
-          <div style={{ marginBottom: 6, fontWeight: 600 }}>Transcript</div>
-          <ul>
-            {transcripts.map((x, i) => (
-              <li key={i}>
-                <span>{x.t}</span>
-                <span style={{ marginLeft: 8, color: "#666" }}>({Math.round((x.c || 1) * 100)}%)</span>
-              </li>
-            ))}
-          </ul>
-          <div style={{ marginTop: 12 }}>
-            <div style={{ fontWeight: 600 }}>History</div>
-            <ul style={{ maxHeight: 120, overflow: 'auto' }}>
-              {(JSON.parse((localStorage.getItem('hc_history')||'[]')) as any[]).map((h,i)=> (
-                <li key={i}><span>{new Date(h.ts).toLocaleTimeString()}</span> — <span>{String(h.out).slice(0,60)}</span></li>
+    <HyperLayout>
+      <div style={{ display: "grid", gridTemplateColumns: focusMode ? "1fr 0px" : "1fr 360px", height: "100%", transition: 'grid-template-columns 200ms ease' }}>
+        <div className="hc-panel" style={{ margin: '10px', display: 'flex', flexDirection: 'column' }}>
+          <div ref={el} style={{ flex: 1 }} />
+        </div>
+        
+        <div className="hc-panel" style={{ margin: '10px 10px 10px 0', borderLeft: "1px solid var(--color-secondary)", padding: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ marginBottom: 8, fontWeight: 600, color: 'var(--color-primary)', textTransform: 'uppercase', letterSpacing: '1px' }}>/ TERMINAL OUTPUT</div>
+          <pre style={{ whiteSpace: "pre-wrap", flex: 1, overflow: 'auto', fontFamily: 'var(--font-mono)', fontSize: '12px', color: '#fff' }}>{out || "> Ready..."}</pre>
+          <div style={{ marginTop: 12, color: "rgba(255,255,255,0.5)", fontSize: '11px' }}>Ctrl+Enter to execute</div>
+          
+          <div style={{ borderTop: '1px solid rgba(6,182,212,0.2)', margin: '10px 0', paddingTop: 10 }}>
+             <VoiceButton onTranscript={(t, c) => setTranscripts((prev) => [{ t, c }, ...prev])} />
+          </div>
+
+          <div aria-live="polite" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ marginBottom: 6, fontWeight: 600, color: 'var(--color-secondary)' }}>/ TRANSCRIPT</div>
+            <ul style={{ maxHeight: 100, overflow: 'auto', listStyle: 'none', padding: 0 }}>
+              {transcripts.map((x, i) => (
+                <li key={i} style={{ marginBottom: 4, fontSize: '12px' }}>
+                  <span style={{ color: '#00ff88' }}>&gt; {x.t}</span>
+                  <span style={{ marginLeft: 8, color: "#666" }}>({Math.round((x.c || 1) * 100)}%)</span>
+                </li>
               ))}
             </ul>
+            <div style={{ marginTop: 12, flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ fontWeight: 600, color: 'var(--color-secondary)' }}>/ HISTORY</div>
+              <ul style={{ flex: 1, overflow: 'auto', listStyle: 'none', padding: 0 }}>
+                {(JSON.parse((localStorage.getItem('hc_history')||'[]')) as any[]).map((h,i)=> (
+                  <li key={i} style={{ marginBottom: 4, fontSize: '11px', borderBottom: '1px dashed rgba(255,255,255,0.1)', paddingBottom: 2 }}>
+                    <span style={{ color: '#888' }}>{new Date(h.ts).toLocaleTimeString()}</span> <span style={{ color: '#aaa' }}>{String(h.out).slice(0,60)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
+        <StatusBar focusMode={focusMode} setFocusMode={setFocusMode} fontScale={fontScale} />
       </div>
-      <StatusBar focusMode={focusMode} setFocusMode={setFocusMode} fontScale={fontScale} />
-    </div>
+    </HyperLayout>
   )
 }
 
@@ -189,14 +206,8 @@ function VoiceButton({ onTranscript }: { onTranscript: (t: string, c: number) =>
       onMouseDown={handleHold}
       onMouseUp={handleRelease}
       aria-pressed={recording}
-      style={{
-        marginTop: 12,
-        padding: "8px 12px",
-        borderRadius: 8,
-        border: "1px solid #888",
-        background: recording ? "#ff3366" : "#ffffff",
-        color: recording ? "#fff" : "#111"
-      }}
+      className={`hc-button ${recording ? 'active' : ''}`}
+      style={{ width: '100%' }}
     >
       {recording ? "Recording…" : "Hold to speak (Ctrl+Space)"}
     </button>
@@ -218,15 +229,20 @@ function StatusBar({ focusMode, setFocusMode, fontScale }: { focusMode: boolean;
         setFocusMode(!focusMode)
       }
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
   }, [focusMode])
   return (
-    <div style={{ position: 'fixed', bottom: 8, right: 8, display: 'flex', gap: 12, alignItems: 'center' }}>
-      <button aria-pressed={focusMode} onClick={() => setFocusMode(!focusMode)} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #ddd' }}>
-        {focusMode ? 'Exit Focus Mode' : 'Focus Mode'}
+    <div style={{ position: 'fixed', bottom: 15, right: 20, display: 'flex', gap: 12, alignItems: 'center', zIndex: 10 }}>
+      <button 
+        aria-pressed={focusMode} 
+        onClick={() => setFocusMode(!focusMode)} 
+        className="hc-button"
+        style={{ padding: '4px 10px', fontSize: '10px' }}
+      >
+        {focusMode ? 'EXIT FOCUS' : 'FOCUS MODE'}
       </button>
-      <span style={{ fontSize: 12, color: '#666' }}>Font x{fontScale.toFixed(2)}</span>
+      <span style={{ fontSize: 12, color: 'var(--color-secondary)', fontFamily: 'var(--font-mono)' }}>MAG: x{fontScale.toFixed(2)}</span>
     </div>
   )
 }

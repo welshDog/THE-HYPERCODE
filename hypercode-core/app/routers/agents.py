@@ -15,50 +15,53 @@ CONNECTED_AGENTS: dict[str, WebSocket] = {}
 
 async def sse_event_generator(one_shot: bool = False, max_failures: int | None = 3, connect_timeout: float = 5.0, idle_sleep: float = 0.1):
     AGENT_STREAM_CLIENTS.labels(ENV_LABEL, VER_LABEL).inc()
-    failures = 0
-    pubsub = agent_registry.redis.pubsub()
-    while True:
-        try:
-            await asyncio.wait_for(pubsub.subscribe(agent_registry.pubsub_channel), timeout=connect_timeout)
+    try:
+        failures = 0
+        pubsub = agent_registry.redis.pubsub()
+        while True:
             try:
-                # Prefer native async listener if available; fallback to polling
-                if one_shot:
+                await asyncio.wait_for(pubsub.subscribe(agent_registry.pubsub_channel), timeout=connect_timeout)
+                try:
+                    # Prefer native async listener if available; fallback to polling
+                    if one_shot:
+                        await pubsub.unsubscribe(agent_registry.pubsub_channel)
+                        break
+                    if hasattr(pubsub, "listen"):
+                        listener = await pubsub.listen()
+                        async for message in listener:
+                            if message.get("type") == "message":
+                                try:
+                                    t0 = asyncio.get_event_loop().time()
+                                    payload = message["data"].decode("utf-8")
+                                    yield payload
+                                    dt = (asyncio.get_event_loop().time() - t0) * 1000.0
+                                    STREAM_LATENCY_MS.labels("GET", "200", ENV_LABEL, VER_LABEL).observe(dt)
+                                except Exception:
+                                    continue
+                    else:
+                        while True:
+                            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                            if message and message.get("type") == "message":
+                                try:
+                                    t0 = asyncio.get_event_loop().time()
+                                    payload = message["data"].decode("utf-8")
+                                    yield payload
+                                    dt = (asyncio.get_event_loop().time() - t0) * 1000.0
+                                    STREAM_LATENCY_MS.labels("GET", "200", ENV_LABEL, VER_LABEL).observe(dt)
+                                except Exception:
+                                    continue
+                            await asyncio.sleep(idle_sleep)
+                except asyncio.CancelledError:
                     await pubsub.unsubscribe(agent_registry.pubsub_channel)
                     break
-                if hasattr(pubsub, "listen"):
-                    listener = await pubsub.listen()
-                    async for message in listener:
-                        if message.get("type") == "message":
-                            try:
-                                t0 = asyncio.get_event_loop().time()
-                                payload = message["data"].decode("utf-8")
-                                yield payload
-                                dt = (asyncio.get_event_loop().time() - t0) * 1000.0
-                                STREAM_LATENCY_MS.labels("GET", "200", ENV_LABEL, VER_LABEL).observe(dt)
-                            except Exception:
-                                continue
-                else:
-                    while True:
-                        message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
-                        if message and message.get("type") == "message":
-                            try:
-                                t0 = asyncio.get_event_loop().time()
-                                payload = message["data"].decode("utf-8")
-                                yield payload
-                                dt = (asyncio.get_event_loop().time() - t0) * 1000.0
-                                STREAM_LATENCY_MS.labels("GET", "200", ENV_LABEL, VER_LABEL).observe(dt)
-                            except Exception:
-                                continue
-                        await asyncio.sleep(idle_sleep)
-            except asyncio.CancelledError:
-                await pubsub.unsubscribe(agent_registry.pubsub_channel)
-                break
-        except Exception:
-            ERROR_COUNT.labels("stream", ENV_LABEL, VER_LABEL).inc()
-            failures += 1
-            if max_failures is not None and failures >= max_failures:
-                break
-            await asyncio.sleep(0.1)
+            except Exception:
+                ERROR_COUNT.labels("stream", ENV_LABEL, VER_LABEL).inc()
+                failures += 1
+                if max_failures is not None and failures >= max_failures:
+                    break
+                await asyncio.sleep(0.1)
+    finally:
+        AGENT_STREAM_CLIENTS.labels(ENV_LABEL, VER_LABEL).dec()
 
 @router.get("/", response_model=list[AgentMetadata])
 async def get_agents():

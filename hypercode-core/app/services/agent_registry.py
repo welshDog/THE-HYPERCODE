@@ -4,7 +4,7 @@ import asyncio
 from typing import List, Optional
 import time
 import redis.asyncio as redis
-from prometheus_client import Counter, Histogram, Summary
+from prometheus_client import Counter, Histogram, Summary, Gauge
 from os import getenv
 from app.core.config import get_settings
 from app.schemas.agent import AgentMetadata, AgentStatus, AgentRegistrationRequest
@@ -28,7 +28,7 @@ AGENT_UPDATED = Counter(
     "Agent updated",
     ["env", "version"],
 )
-AGENT_STREAM_CLIENTS = Counter(
+AGENT_STREAM_CLIENTS = Gauge(
     "agent_stream_clients_total",
     "Agent stream clients connected",
     ["env", "version"],

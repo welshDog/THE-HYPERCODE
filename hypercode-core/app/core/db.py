@@ -259,6 +259,24 @@ except Exception:
                 items = items[:take]
             return [_Obj(v) for v in items]
 
+    class _TokenUsageModel:
+        def __init__(self):
+            self._items: Dict[str, Dict[str, Any]] = {}
+
+        async def create(self, data: Dict[str, Any]) -> Any:
+            import uuid, datetime
+            tid = data.get("id") or str(uuid.uuid4())
+            now = datetime.datetime.now(datetime.UTC)
+            entry = dict(data)
+            entry["id"] = tid
+            entry["timestamp"] = entry.get("timestamp") or now
+            self._items[tid] = entry
+            return _Obj(self._items[tid])
+
+        async def find_many(self, where: Optional[Dict[str, Any]] = None) -> List[Any]:
+            items = list(self._items.values())
+            return [_Obj(v) for v in items]
+
     class _Obj:
         def __init__(self, data: Dict[str, Any]):
             self.__dict__.update(data)
@@ -269,6 +287,7 @@ except Exception:
             self.memory = _MemoryModel()
             self.mission = _MissionModel()
             self.auditlog = _AuditLogModel()
+            self.tokenusage = _TokenUsageModel()
 
         async def connect(self):
             return None

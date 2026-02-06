@@ -171,8 +171,12 @@ class MemoryService:
         
         # Simple keyword/content search
         if params.query:
+            # SEC-05: Fix Broken Encrypted Search
+            # Content is encrypted, so 'contains' will fail or leak data. 
+            # We restrict search to keywords (plaintext) and metadata tags.
+            # TODO: Implement vector search (pgvector) for true semantic search over content.
             where_clause["OR"] = [
-                {"content": {"contains": params.query, "mode": "insensitive"}},
+                # {"content": {"contains": params.query, "mode": "insensitive"}}, # REMOVED: Unsafe on encrypted data
                 {"keywords": {"has": params.query}} 
             ]
 

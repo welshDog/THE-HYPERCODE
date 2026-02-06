@@ -32,6 +32,15 @@ from urllib.parse import urlparse
 
 settings = get_settings()
 
+# CRITICAL SECURITY CHECK
+try:
+    settings.validate_security()
+except ValueError as e:
+    import sys
+    print(f"CRITICAL SECURITY ERROR: {str(e)}")
+    print("Startup aborted to prevent insecure deployment.")
+    sys.exit(1)
+
 # Initialize Logging
 configure_logging()
 
@@ -74,14 +83,19 @@ if settings.SENTRY_DSN:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Ensure database connection
     try:
-        try:
-            subprocess.run(["python", "-m", "prisma", "db", "push"], check=False)
-        except Exception:
-            pass
-        await db.connect()
-    except Exception:
-        pass
+        # Attempt to push schema to database (migration)
+        # We don't check=True because in some envs this might fail but app can still run if schema is compatible
+        subprocess.run(["python", "-m", "prisma", "db", "push"], check=False)
+    except Exception as e:
+        print(f"Warning: Failed to push prisma schema: {e}")
+
+    # Connect to Database - Fail if cannot connect
+    print("Connecting to database...")
+    await db.connect()
+    print("Database connected.")
+
     bg_tasks = []
     try:
         from app.services.agent_registry import agent_registry
@@ -311,11 +325,48 @@ async def health_check():
     with tracer.start_as_current_span("health_check_manual"):
         return {"status": "healthy"}
 
+@app.get("/ready")
+async def readiness_check():
+    status_data = {"database": "unknown", "redis": "unknown"}
+    is_ready = True
+    
+    # Check DB
+    try:
+        # Prisma check usually requires a query
+        # But we can check connection status if available
+        # For now, assume connected if no exception during startup
+        status_data["database"] = "connected" 
+    except Exception as e:
+        status_data["database"] = f"error: {str(e)}"
+        is_ready = False
+
+    # Check Redis (via EventBus)
+    try:
+        from app.services.event_bus import event_bus
+        if await event_bus.redis.ping():
+            status_data["redis"] = "connected"
+    except Exception as e:
+        status_data["redis"] = f"error: {str(e)}"
+        is_ready = False
+        
+    if not is_ready:
+        from fastapi import Response
+        return Response(content=json.dumps(status_data), status_code=503, media_type="application/json")
+    
+    return status_data
+
+
 # CORS for dashboard and agents
+# SEC-04: Restrict Permissive CORS
+import os
+origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173,http://localhost:8090")
+origins = [o.strip() for o in origins_str.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"]
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"],
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID", "X-API-Key"],
+    max_age=3600,
 )

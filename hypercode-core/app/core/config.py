@@ -12,6 +12,27 @@ class Settings(BaseSettings):
     SENTRY_DSN: Optional[str] = None
     LOG_LEVEL: str = "INFO"
     HYPERCODE_MEMORY_KEY: Optional[str] = None
+    HYPERCODE_JWT_SECRET: Optional[str] = None
+    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
+    
+    def validate_security(self):
+        # Allow dev/test bypass
+        if self.ENVIRONMENT.lower() in ("development", "test"):
+            return
+        
+        if not self.API_KEY:
+            raise ValueError("API_KEY is missing in production/staging!")
+        
+        if not self.HYPERCODE_JWT_SECRET:
+            raise ValueError("HYPERCODE_JWT_SECRET is missing in production/staging!")
+        
+        if len(self.HYPERCODE_JWT_SECRET) < 32:
+            raise ValueError(f"HYPERCODE_JWT_SECRET is too short ({len(self.HYPERCODE_JWT_SECRET)} chars). Must be at least 32 characters.")
+
+    # Rate Limiting
+    RATE_LIMIT_WINDOW_SECONDS: int = 60
+    RATE_LIMIT_MAX_REQUESTS: int = 100
     
     class Config:
         env_file = ".env"

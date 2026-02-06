@@ -1,0 +1,118 @@
+:root {
+  --color-primary: #7c3aed;
+  --color-secondary: #06b6d4;
+  --color-bg: #0f0f1e;
+  --color-panel: #1a1a2e;
+  --color-text: #00ff88;
+  --glow-purple: 0 0 20px rgba(124, 58, 237, 0.6);
+  --glow-cyan: 0 0 20px rgba(6, 182, 212, 0.6);
+  --font-mono: 'Courier New', monospace;
+  --font-ui: 'Inter', system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-secondary);
+  border-radius: 5px;
+  border: 2px solid var(--color-bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
+}
+
+/* HyperCode Utilities */
+.hc-container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.hc-header {
+  height: 60px;
+  background: linear-gradient(90deg, rgba(15, 15, 30, 0.95), transparent);
+  padding: 0 20px;
+  border-bottom: 1px solid rgba(6, 182, 212, 0.2);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.hc-title {
+  font-size: 18px;
+  color: var(--color-secondary);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  margin: 0;
+  text-shadow: 0 0 10px rgba(6, 182, 212, 0.6);
+  font-weight: bold;
+}
+
+.hc-panel {
+  background-color: rgba(26, 26, 46, 0.8);
+  border: 1px solid var(--color-secondary);
+  border-radius: 4px;
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.1), inset 0 0 20px rgba(6, 182, 212, 0.05);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+
+.hc-panel.primary {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 15px rgba(124, 58, 237, 0.1), inset 0 0 20px rgba(124, 58, 237, 0.05);
+}
+
+/* Button Styling */
+.hc-button {
+  background: rgba(6, 182, 212, 0.1);
+  border: 1px solid var(--color-secondary);
+  color: var(--color-secondary);
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.hc-button:hover {
+  background: var(--color-secondary);
+  color: var(--color-bg);
+  box-shadow: var(--glow-cyan);
+}
+
+.hc-button.active {
+  background: var(--color-secondary);
+  color: var(--color-bg);
+  box-shadow: var(--glow-cyan);
+}
+
+/* Monaco Editor Overrides */
+.monaco-editor {
+  background-color: transparent !important;
+}
+.monaco-editor .margin {
+  background-color: transparent !important;
+}

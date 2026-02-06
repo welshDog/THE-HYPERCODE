@@ -33,7 +33,16 @@ class HCFileRequest(BaseModel):
 @router.post("/execute-hc-file", response_model=ExecutionResult, status_code=status.HTTP_200_OK)
 async def execute_hypercode_file(req: HCFileRequest):
     try:
-        with open(req.path, "r", encoding="utf-8") as f:
+        import os
+        # SEC-01: Fix Path Traversal
+        # Ensure path is within the allowed workspace (current working directory for now)
+        base_dir = os.path.abspath(os.getcwd())
+        requested_path = os.path.abspath(req.path)
+        
+        if not requested_path.startswith(base_dir):
+             raise ValueError("Access denied: Path is outside the allowed directory.")
+
+        with open(requested_path, "r", encoding="utf-8") as f:
             src = f.read()
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
