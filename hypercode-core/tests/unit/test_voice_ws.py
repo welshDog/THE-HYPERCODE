@@ -8,10 +8,12 @@ from main import app
 pytestmark = pytest.mark.experimental
 
 
-client = TestClient(app)
+@pytest.fixture
+def client():
+    return TestClient(app)
 
 
-def test_voice_ws_text_flow_dev_auth_disabled():
+def test_voice_ws_text_flow_dev_auth_disabled(client):
     settings = get_settings()
     # ensure dev mode allows open access
     assert settings.API_KEY in (None, "",)
@@ -22,7 +24,7 @@ def test_voice_ws_text_flow_dev_auth_disabled():
         assert data["exit_code"] == 0
 
 
-def test_voice_ws_rate_limit():
+def test_voice_ws_rate_limit(client):
     # simulate many messages and expect success under limit
     with client.websocket_connect("/voice/ws") as ws:
         for _ in range(5):

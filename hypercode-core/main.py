@@ -303,8 +303,11 @@ FastAPIInstrumentor.instrument_app(app)
 if _instrumentator_available:
     Instrumentator().instrument(app).expose(app)
 else:
-    from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+    from prometheus_client import generate_latest, CONTENT_TYPE_LATEST, Counter
     from fastapi import Response
+
+    # Custom Business Metric
+    HYPERCODE_FEATURE_USAGE = Counter('hypercode_feature_usage_total', 'Usage of HyperCode business features', ['feature_name'])
 
     @app.get("/metrics")
     async def metrics_fallback():
@@ -321,12 +324,18 @@ app.include_router(simulator.router, prefix="/simulator", tags=["Simulator"])
 
 @app.get("/health")
 async def health_check():
+    # Increment our custom metric
+    if not _instrumentator_available:
+         HYPERCODE_FEATURE_USAGE.labels(feature_name='health_check').inc()
     tracer = trace.get_tracer(__name__)
     with tracer.start_as_current_span("health_check_manual"):
         return {"status": "healthy"}
 
 @app.get("/ready")
 async def readiness_check():
+    # Increment our custom metric
+    if not _instrumentator_available:
+        HYPERCODE_FEATURE_USAGE.labels(feature_name='readiness_check').inc()
     status_data = {"database": "unknown", "redis": "unknown"}
     is_ready = True
     

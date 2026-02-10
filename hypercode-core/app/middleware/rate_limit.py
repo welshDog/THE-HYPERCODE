@@ -3,9 +3,26 @@ import logging
 import redis.asyncio as redis
 from fastapi import HTTPException, status
 from app.core.config import get_settings
+from prometheus_client import Counter
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+RATE_LIMIT_CHECKS = Counter(
+    "rate_limit_checks_total",
+    "Rate limit checks performed",
+    ["scope", "status"]
+)
+RATE_LIMIT_HITS = Counter(
+    "rate_limit_hits_total",
+    "Rate limit hits (blocked requests)",
+    ["scope"]
+)
+REDIS_ERRORS = Counter(
+    "redis_errors_total",
+    "Redis errors",
+    []
+)
 
 # Lua script for atomic fixed window
 # Returns 1 if allowed, 0 if blocked

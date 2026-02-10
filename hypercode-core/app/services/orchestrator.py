@@ -39,7 +39,13 @@ AUDIT_RETRIEVE_LATENCY = Histogram(
 
 class Orchestrator:
     def __init__(self):
-        self.redis = redis.from_url(settings.HYPERCODE_REDIS_URL)
+        self.redis = redis.from_url(
+            settings.HYPERCODE_REDIS_URL,
+            encoding="utf-8",
+            decode_responses=True,
+            socket_connect_timeout=5,
+            retry_on_timeout=True
+        )
         self._redis_initialized = False
 
     async def _ensure_redis(self):
@@ -47,13 +53,15 @@ class Orchestrator:
             return
         try:
             await self.redis.ping()
-        except Exception:
+            self._redis_initialized = True
+        except Exception as e:
+            logger.warning(f"Redis not available: {e}, falling back to fakeredis for development/testing")
             try:
                 from fakeredis.aioredis import FakeRedis
-                self.redis = FakeRedis()
+                self.redis = FakeRedis(decode_responses=True)
+                self._redis_initialized = True
             except Exception:
                 pass
-        self._redis_initialized = True
 
     async def _key(self, mission_id: str) -> str:
         return f"mission:{mission_id}"
@@ -125,14 +133,14 @@ class Orchestrator:
         keys = await self.redis.keys("mission:*")
         for k in keys:
             v = await self.redis.hgetall(k)
-            if v.get(b"state", b"").decode() != MissionState.QUEUED.value:
+            if v.get("state", "") != MissionState.QUEUED.value:
                 continue
             req_caps: list[str] = []
             try:
-                payload_raw = v.get(b"payload")
+                payload_raw = v.get("payload")
                 if payload_raw:
                     import json
-                    payload = json.loads(payload_raw.decode()) if isinstance(payload_raw, bytes) else json.loads(payload_raw)
+                    payload = json.loads(payload_raw)
                     req_caps = payload.get("requirements", {}).get("capabilities", [])
             except Exception:
                 req_caps = []
@@ -191,7 +199,7 @@ class Orchestrator:
                 if not fallback_agents:
                     return None
                 agent_id = fallback_agents[0].id
-                mid = v[b"id"].decode()
+                mid = v["id"]
                 await self.redis.hset(k, mapping={
                     "state": MissionState.ASSIGNED.value,
                     "agent_id": agent_id,
@@ -227,17 +235,17 @@ class Orchestrator:
                 MISSION_TRANSITIONS.labels(MissionState.QUEUED.value, MissionState.ASSIGNED.value).inc()
                 mv = await self.redis.hgetall(k)
                 return MissionStatus.model_validate({
-                    "id": mv[b"id"].decode(),
-                    "title": mv[b"title"].decode(),
+                    "id": mv["id"],
+                    "title": mv["title"],
                     "state": MissionState.ASSIGNED,
-                    "priority": int(mv[b"priority"].decode()),
-                    "agent_id": mv[b"agent_id"].decode() or None,
-                    "created_at": datetime.fromisoformat(mv[b"created_at"].decode()),
-                    "updated_at": datetime.fromisoformat(mv[b"updated_at"].decode()),
+                    "priority": int(mv["priority"]),
+                    "agent_id": mv["agent_id"] or None,
+                    "created_at": datetime.fromisoformat(mv["created_at"]),
+                    "updated_at": datetime.fromisoformat(mv["updated_at"]),
                 })
             scored.sort(key=lambda t: t[0], reverse=True)
             agent_id = scored[0][1].id
-            mid = v[b"id"].decode()
+            mid = v["id"]
 
             await self.redis.hset(k, mapping={
                 "state": MissionState.ASSIGNED.value,
@@ -279,13 +287,13 @@ class Orchestrator:
             MISSION_TRANSITIONS.labels(MissionState.QUEUED.value, MissionState.ASSIGNED.value).inc()
             mv = await self.redis.hgetall(k)
             return MissionStatus.model_validate({
-                "id": mv[b"id"].decode(),
-                "title": mv[b"title"].decode(),
+                "id": mv["id"],
+                "title": mv["title"],
                 "state": MissionState.ASSIGNED,
-                "priority": int(mv[b"priority"].decode()),
-                "agent_id": mv[b"agent_id"].decode() or None,
-                "created_at": datetime.fromisoformat(mv[b"created_at"].decode()),
-                "updated_at": datetime.fromisoformat(mv[b"updated_at"].decode()),
+                "priority": int(mv["priority"]),
+                "agent_id": mv["agent_id"] or None,
+                "created_at": datetime.fromisoformat(mv["created_at"]),
+                "updated_at": datetime.fromisoformat(mv["updated_at"]),
             })
         return None
 
@@ -295,7 +303,7 @@ class Orchestrator:
         v = await self.redis.hgetall(k)
         if not v:
             return None
-        from_state = v.get(b"state", b"").decode()
+        from_state = v.get("state", "")
         await self.redis.hset(k, mapping={
             "state": to_state.value,
             "updated_at": datetime.now(timezone.utc).isoformat(),
@@ -303,7 +311,7 @@ class Orchestrator:
 
         try:
             if to_state == MissionState.FAILED:
-                agent_id = v.get(b"agent_id", b"").decode() if v.get(b"agent_id") else ""
+                agent_id = v.get("agent_id", "") if v.get("agent_id") else ""
                 if agent_id:
                     fkey = f"agent:{agent_id}:failures"
                     try:
@@ -349,13 +357,13 @@ class Orchestrator:
         MISSION_TRANSITIONS.labels(from_state or "none", to_state.value).inc()
         mv = await self.redis.hgetall(k)
         return MissionStatus.model_validate({
-            "id": mv[b"id"].decode(),
-            "title": mv[b"title"].decode(),
+            "id": mv["id"],
+            "title": mv["title"],
             "state": to_state,
-            "priority": int(mv[b"priority"].decode()),
-            "agent_id": mv[b"agent_id"].decode() or None,
-            "created_at": datetime.fromisoformat(mv[b"created_at"].decode()),
-            "updated_at": datetime.fromisoformat(mv[b"updated_at"].decode()),
+            "priority": int(mv["priority"]),
+            "agent_id": mv["agent_id"] or None,
+            "created_at": datetime.fromisoformat(mv["created_at"]),
+            "updated_at": datetime.fromisoformat(mv["updated_at"]),
         })
 
     async def start(self, mission_id: str) -> MissionStatus | None:
@@ -377,13 +385,13 @@ class Orchestrator:
         if not v:
             return None
         return MissionStatus.model_validate({
-            "id": v[b"id"].decode(),
-            "title": v[b"title"].decode(),
-            "state": MissionState(v[b"state"].decode()),
-            "priority": int(v[b"priority"].decode()),
-            "agent_id": v[b"agent_id"].decode() or None,
-            "created_at": datetime.fromisoformat(v[b"created_at"].decode()),
-            "updated_at": datetime.fromisoformat(v[b"updated_at"].decode()),
+            "id": v["id"],
+            "title": v["title"],
+            "state": MissionState(v["state"]),
+            "priority": int(v["priority"]),
+            "agent_id": v["agent_id"] or None,
+            "created_at": datetime.fromisoformat(v["created_at"]),
+            "updated_at": datetime.fromisoformat(v["updated_at"]),
         })
 
     async def list(self, limit: int = 10) -> List[MissionStatus]:
@@ -396,13 +404,13 @@ class Orchestrator:
                 continue
             try:
                 items.append({
-                    "id": v[b"id"].decode(),
-                    "title": v[b"title"].decode(),
-                    "state": MissionState(v[b"state"].decode()),
-                    "priority": int(v[b"priority"].decode()),
-                    "agent_id": v.get(b"agent_id", b"").decode() or None,
-                    "created_at": datetime.fromisoformat(v[b"created_at"].decode()),
-                    "updated_at": datetime.fromisoformat(v[b"updated_at"].decode()),
+                    "id": v["id"],
+                    "title": v["title"],
+                    "state": MissionState(v["state"]),
+                    "priority": int(v["priority"]),
+                    "agent_id": v.get("agent_id") or None,
+                    "created_at": datetime.fromisoformat(v["created_at"]),
+                    "updated_at": datetime.fromisoformat(v["updated_at"]),
                 })
             except Exception:
                 continue
@@ -453,8 +461,8 @@ class Orchestrator:
             await db.auditlog.create({
                 "missionId": mission_id,
                 "transition": "approve",
-                "previousState": v.get(b"state", b"").decode(),
-                "newState": v.get(b"state", b"").decode(),
+                "previousState": v.get("state", ""),
+                "newState": v.get("state", ""),
                 "actor": "manager",
                 "reason": "Approval",
             })
@@ -462,13 +470,13 @@ class Orchestrator:
             pass
         mv = await self.redis.hgetall(k)
         return MissionStatus.model_validate({
-            "id": mv[b"id"].decode(),
-            "title": mv[b"title"].decode(),
-            "state": MissionState(mv[b"state"].decode()),
-            "priority": int(mv[b"priority"].decode()),
-            "agent_id": mv[b"agent_id"].decode() or None,
-            "created_at": datetime.fromisoformat(mv[b"created_at"].decode()),
-            "updated_at": datetime.fromisoformat(mv[b"updated_at"].decode()),
+            "id": mv["id"],
+            "title": mv["title"],
+            "state": MissionState(mv["state"]),
+            "priority": int(mv["priority"]),
+            "agent_id": mv["agent_id"] or None,
+            "created_at": datetime.fromisoformat(mv["created_at"]),
+            "updated_at": datetime.fromisoformat(mv["updated_at"]),
         })
 
     async def submit_report(self, mission_id: str, agent_id: str, report: Dict[str, Any]) -> Dict[str, Any]:
@@ -501,7 +509,14 @@ class Orchestrator:
                 try:
                     await db.auditlog.create(payload)
                     break
-                except Exception:
+                except Exception as e:
+                    # Check for foreign key violation (Mission not found)
+                    # Prisma error handling varies, but usually involves PydanticValidationError or internal error
+                    # If mission doesn't exist, we should probably fail early or return specific error
+                    # For now, if we can't create audit because mission missing, return specific error
+                    if "Foreign key constraint failed" in str(e) or "Record to connect not found" in str(e):
+                        return {"ok": False, "error": "Mission not found"}
+                    
                     tries += 1
                     await asyncio.sleep(min(0.05 * (2 ** tries), 0.5))
             return {"ok": True, "path": fpath}

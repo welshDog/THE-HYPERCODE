@@ -57,7 +57,13 @@ STREAM_LATENCY_MS = Histogram(
 
 class AgentRegistry:
     def __init__(self):
-        self.redis = redis.from_url(settings.HYPERCODE_REDIS_URL)
+        self.redis = redis.from_url(
+            settings.HYPERCODE_REDIS_URL,
+            encoding="utf-8",
+            decode_responses=True,
+            socket_connect_timeout=5,
+            retry_on_timeout=True
+        )
         self.ttl = 60  # Agent expiration time in seconds
         self.pubsub_channel = "agents:watch"
         self._env = _env

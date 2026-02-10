@@ -14,7 +14,13 @@ class EventBus:
     Hardened with Deduplication, ACLs, and Circuit Breaker logic.
     """
     def __init__(self):
-        self.redis = redis.from_url(settings.HYPERCODE_REDIS_URL)
+        self.redis = redis.from_url(
+            settings.HYPERCODE_REDIS_URL,
+            encoding="utf-8",
+            decode_responses=True,
+            socket_connect_timeout=5,
+            retry_on_timeout=True
+        )
         self.dedup_ttl = 3600  # Deduplication window: 1 hour
         
         # Simple ACL Map: role -> allowed_topics

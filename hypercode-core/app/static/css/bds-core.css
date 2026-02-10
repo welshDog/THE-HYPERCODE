@@ -1,0 +1,107 @@
+
+/* BROski Hyper Design System - Core Variables */
+
+:root {
+  /* === COLOR PALETTE === */
+  /* Background */
+  --deep-void: #0B0418;
+  --void-light: #1a0f2e;
+  
+  /* Accents */
+  --hyper-cyan: #00F3FF;
+  --matrix-green: #0AFF60;
+  --ember-orange: #FF6B35;
+  --plasma-purple: #9D4EDD;
+  
+  /* Neutrals */
+  --ghost-white: #F5F7FA;
+  --slate-gray: #64748B;
+  --shadow-black: rgba(0, 0, 0, 0.5);
+  
+  /* === TYPOGRAPHY === */
+  --font-heading: 'Orbitron', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-code: 'JetBrains Mono', monospace;
+  
+  /* Font Sizes (Modular Scale 1.25) */
+  --text-xs: 0.64rem;
+  --text-sm: 0.8rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.563rem;
+  --text-2xl: 1.953rem;
+  --text-3xl: 2.441rem;
+  
+  /* === SPACING (8px grid) === */
+  --space-xs: 0.5rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+  --space-xl: 3rem;
+  --space-2xl: 4rem;
+  
+  /* === EFFECTS === */
+  --blur-glass: blur(10px);
+  --glow-cyan: 0 0 20px rgba(0, 243, 255, 0.4);
+  --glow-green: 0 0 20px rgba(10, 255, 96, 0.4);
+  
+  /* === TRANSITIONS === */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.3s ease;
+  --transition-slow: 0.5s ease;
+}
+
+/* === BASE STYLES === */
+body {
+  background: var(--deep-void);
+  color: var(--ghost-white);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+code, pre {
+  font-family: var(--font-code);
+}
+
+/* === HOLO-CARD === */
+.holo-card {
+  background: rgba(11, 4, 24, 0.6);
+  backdrop-filter: var(--blur-glass);
+  border: 1px solid rgba(0, 243, 255, 0.2);
+  border-radius: 12px;
+  padding: var(--space-md);
+  transition: all var(--transition-base);
+}
+
+.holo-card:hover {
+  border-color: var(--hyper-cyan);
+  transform: translateY(-2px);
+  box-shadow: var(--glow-cyan);
+}
+
+.holo-card--glow {
+  box-shadow: var(--glow-cyan);
+}
+
+/* === ACCESSIBILITY === */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Dyslexia-friendly mode */
+body.dyslexia-mode {
+  font-family: 'OpenDyslexic', var(--font-body);
+  letter-spacing: 0.05em;
+  word-spacing: 0.1em;
+}

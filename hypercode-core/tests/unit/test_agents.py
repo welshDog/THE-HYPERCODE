@@ -52,8 +52,8 @@ async def test_heartbeat(async_client):
     data = response.json()
     assert data["status"] == "busy"
 
-def test_sse_stream_endpoint_sync():
-    client = TestClient(app)
-    resp = client.get("/agents/watch?one_shot=true")
-    assert resp.status_code == 200
-    assert resp.headers.get("content-type", "").startswith("text/event-stream")
+@pytest.mark.asyncio
+async def test_sse_stream_endpoint_sync(async_client):
+    async with async_client.stream("GET", "/agents/watch?one_shot=true") as resp:
+        assert resp.status_code == 200
+        assert resp.headers.get("content-type", "").startswith("text/event-stream")

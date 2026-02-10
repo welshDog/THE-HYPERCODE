@@ -19,18 +19,18 @@ class FakePubSub:
         return None
     async def unsubscribe(self, channel):
         return None
-    async def listen(self):
-        async def gen():
-            for m in self.messages:
-                yield m.as_event()
-        return gen()
+    async def get_message(self, ignore_subscribe_messages=False, timeout=None):
+        if not self.messages:
+            return None
+        m = self.messages.pop(0)
+        return m.as_event()
 
 
 @pytest.mark.asyncio
 async def test_stream_latency_metric_observed(monkeypatch):
     msgs = [_Msg(b"ping"), _Msg(b"pong"), _Msg(b"x")] 
     def fake_pubsub():
-        return FakePubSub(msgs)
+        return FakePubSub(list(msgs))
     monkeypatch.setattr(agent_registry.redis, "pubsub", fake_pubsub)
     gen = sse_event_generator()
     await gen.__anext__()

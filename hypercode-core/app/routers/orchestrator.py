@@ -42,7 +42,10 @@ async def submit_health_report(mission_id: str, payload: dict = Body(...)):
     agent_id = str(payload.get("agent_id") or "agent")
     res = await orchestrator.submit_report(mission_id, agent_id, payload)
     if not res.get("ok"):
-        raise HTTPException(status_code=500, detail=res.get("error") or "submit failed")
+        error_msg = res.get("error") or "submit failed"
+        if "Mission not found" in error_msg or "not found" in error_msg.lower():
+             raise HTTPException(status_code=404, detail="Mission not found")
+        raise HTTPException(status_code=500, detail=error_msg)
     return res
 
 @router.post("/{mission_id}/verify", response_model=MissionStatus, dependencies=[Security(get_current_user, scopes=["mission:write"])])

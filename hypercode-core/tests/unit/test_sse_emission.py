@@ -29,12 +29,11 @@ class FakePubSub:
     async def unsubscribe(self, channel):
         return None
 
-    async def listen(self):
-        async def gen():
-            for m in self.messages:
-                await asyncio.sleep(0)
-                yield m.as_event()
-        return gen()
+    async def get_message(self, ignore_subscribe_messages=False, timeout=None):
+        if not self.messages:
+            return None
+        m = self.messages.pop(0)
+        return m.as_event()
 
 
 @pytest.mark.asyncio
@@ -45,7 +44,7 @@ async def test_sse_emits_valid_messages(monkeypatch):
     ]
 
     def fake_pubsub():
-        return FakePubSub(payloads)
+        return FakePubSub(list(payloads))
 
     monkeypatch.setattr(agent_registry.redis, "pubsub", fake_pubsub)
     gen = sse_event_generator()
@@ -61,17 +60,16 @@ async def test_sse_handles_malformed_data(monkeypatch):
     good = _Msg(json.dumps({"event": "registered", "data": {"id": "x"}}).encode())
 
     class MalPubSub(FakePubSub):
-        async def listen(self):
-            async def gen():
-                for m in [bad, good]:
-                    try:
-                        yield m.as_event()
-                    except Exception:
-                        continue
-            return gen()
+        async def get_message(self, ignore_subscribe_messages=False, timeout=None):
+            if not self.messages:
+                return None
+            m = self.messages.pop(0)
+            if m == bad:
+                raise Exception("Bad encoding")
+            return m.as_event()
 
     def fake_pubsub():
-        return MalPubSub([])
+        return MalPubSub([bad, good])
 
     monkeypatch.setattr(agent_registry.redis, "pubsub", fake_pubsub)
     gen = sse_event_generator()
@@ -85,7 +83,7 @@ async def test_sse_high_frequency(monkeypatch):
         _Msg(json.dumps({"i": i}).encode()) for i in range(50)
     ]
     def fake_pubsub():
-        return FakePubSub(msgs)
+        return FakePubSub(list(msgs))
     monkeypatch.setattr(agent_registry.redis, "pubsub", fake_pubsub)
     gen = sse_event_generator()
     count = 0
@@ -100,7 +98,7 @@ async def test_sse_high_frequency(monkeypatch):
 async def test_sse_connection_recovers(monkeypatch):
     msgs = [_Msg(b"ok")]
     def fake_pubsub():
-        return FakePubSub(msgs, fail_first=True)
+        return FakePubSub(list(msgs), fail_first=True)
     monkeypatch.setattr(agent_registry.redis, "pubsub", fake_pubsub)
     gen = sse_event_generator()
     v = await gen.__anext__()

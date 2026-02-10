@@ -5,7 +5,8 @@ import os
 
 def test_execute_hc_file_run():
     client = TestClient(app)
-    with tempfile.NamedTemporaryFile("w", delete=False, suffix=".hc", encoding="utf-8") as tf:
+    # Create temp file in current directory to pass path validation
+    with tempfile.NamedTemporaryFile("w", delete=False, suffix=".hc", encoding="utf-8", dir=".") as tf:
         tf.write('print "From File"')
         temp_path = tf.name
     try:

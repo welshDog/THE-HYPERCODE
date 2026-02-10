@@ -73,3 +73,4 @@ coverage.xml
 
 # Reports
 reports/
+hypercode-core/.env

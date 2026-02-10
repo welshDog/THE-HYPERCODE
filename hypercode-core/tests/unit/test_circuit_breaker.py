@@ -6,7 +6,7 @@ from app.schemas.mission import MissionState
 async def test_circuit_breaker_opens_after_failures(monkeypatch):
     try:
         from fakeredis.aioredis import FakeRedis
-        orchestrator.redis = FakeRedis()
+        orchestrator.redis = FakeRedis(decode_responses=True)
     except Exception:
         pytest.skip("fakeredis not available")
 
