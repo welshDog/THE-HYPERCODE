@@ -18,10 +18,15 @@ class Settings(BaseSettings):
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
     
     @model_validator(mode='after')
+    def check_production_security(self) -> 'Settings':
+        """Enforces security requirements for prod/staging"""
+        self.validate_security()
+        return self
+
     def validate_security(self):
         # Allow dev/test bypass
         if self.ENVIRONMENT.lower() in ("development", "test", "local"):
-            return self
+            return
         
         if not self.API_KEY:
             raise ValueError("API_KEY is missing in production/staging!")
@@ -31,7 +36,6 @@ class Settings(BaseSettings):
         
         if len(self.HYPERCODE_JWT_SECRET) < 32:
             raise ValueError(f"HYPERCODE_JWT_SECRET is too short ({len(self.HYPERCODE_JWT_SECRET)} chars). Must be at least 32 characters.")
-        return self
 
     # Rate Limiting
     RATE_LIMIT_WINDOW_SECONDS: int = 60
