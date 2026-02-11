@@ -7,6 +7,7 @@ from app.services.agent_registry import agent_registry
 from app.schemas.agent import AgentMetadata
 from app.core.db import db
 from app.schemas.message import MessageEnvelope
+from app.services.llm_service import llm_service
 from prometheus_client import Counter, Histogram
 from datetime import datetime, timezone
 from typing import List, Dict, Any
@@ -153,106 +154,95 @@ class Orchestrator:
                 except Exception:
                     return None
 
-            async def score_agent(a):
-                # Skip circuit-broken agents
+            # --- AI-Enhanced Selection ---
+            # If enabled, use LLM to score/select agents for complex missions
+            selected_agent_id = None
+            if llm_service.enabled and v.get("title"):
                 try:
-                    cb = await self.redis.get(f"cb:open:{a.id}")
-                    if cb:
+                    candidates_desc = "\n".join([f"- {a.id}: {a.role} (Caps: {a.capabilities}, Status: {a.status})" for a in agents])
+                    prompt = (
+                        f"Mission: {v.get('title')}\n"
+                        f"Requirements: {req_caps}\n"
+                        f"Available Agents:\n{candidates_desc}\n\n"
+                        "Select the best agent ID for this mission. Return ONLY the agent ID."
+                    )
+                    ai_response = await llm_service.generate(prompt)
+                    if ai_response:
+                        ai_id = ai_response.strip()
+                        # Validate ID exists
+                        if any(a.id == ai_id for a in agents):
+                            selected_agent_id = ai_id
+                            logger.info(f"AI selected agent {ai_id} for mission {v.get('id')}")
+                except Exception as e:
+                    logger.warning(f"AI agent selection failed: {e}")
+
+            if selected_agent_id:
+                agent_id = selected_agent_id
+                scored = [] # Bypass manual scoring
+            else:
+                # --- Fallback Manual Scoring ---
+                async def score_agent(a):
+                    # Skip circuit-broken agents
+                    try:
+                        cb = await self.redis.get(f"cb:open:{a.id}")
+                        if cb:
+                            return -1.0
+                    except Exception:
+                        pass
+                    # Capability match
+                    caps = set(a.capabilities or [])
+                    if any(rc for rc in req_caps) and not set(req_caps).issubset(caps):
                         return -1.0
-                except Exception:
-                    pass
-                # Capability match
-                caps = set(a.capabilities or [])
-                if any(rc for rc in req_caps) and not set(req_caps).issubset(caps):
-                    return -1.0
-                # Health based on status and heartbeat recency
-                status_weight = {
-                    "active": 1.0,
-                    "busy": 0.7,
-                    "error": 0.3,
-                    "offline": 0.0,
-                }.get(a.status.value if hasattr(a.status, "value") else str(a.status), 0.5)
-                try:
-                    last = getattr(a, "lastHeartbeat", None) or getattr(a, "createdAt", None)
-                    last_dt = last or datetime.now(timezone.utc)
-                    if last_dt.tzinfo is None:
-                        last_dt = last_dt.replace(tzinfo=timezone.utc)
-                    now_dt = datetime.now(timezone.utc)
-                    age = max((now_dt - last_dt).total_seconds(), 0.0)
-                    recency = max(0.0, 1.0 - min(age / 60.0, 1.0))
-                except Exception:
-                    recency = 0.5
-                load = await agent_registry.get_load(a.id)
-                load_factor = max(0.0, 1.0 - min(load, 1.0))
-                return status_weight * 0.5 + recency * 0.3 + load_factor * 0.2
+                    # Health based on status and heartbeat recency
+                    status_weight = {
+                        "active": 1.0,
+                        "busy": 0.7,
+                        "error": 0.3,
+                        "offline": 0.0,
+                    }.get(a.status.value if hasattr(a.status, "value") else str(a.status), 0.5)
+                    try:
+                        last = getattr(a, "lastHeartbeat", None) or getattr(a, "createdAt", None)
+                        last_dt = last or datetime.now(timezone.utc)
+                        if last_dt.tzinfo is None:
+                            last_dt = last_dt.replace(tzinfo=timezone.utc)
+                        now_dt = datetime.now(timezone.utc)
+                        age = max((now_dt - last_dt).total_seconds(), 0.0)
+                        recency = max(0.0, 1.0 - min(age / 60.0, 1.0))
+                    except Exception:
+                        recency = 0.5
+                    load = await agent_registry.get_load(a.id)
+                    load_factor = max(0.0, 1.0 - min(load, 1.0))
+                    return status_weight * 0.5 + recency * 0.3 + load_factor * 0.2
 
-            scored = []
-            for a in agents:
-                s = await score_agent(a)
-                if s >= 0:
-                    scored.append((s, a))
-            if not scored:
-                try:
-                    fallback_agents = await agent_registry.list_agents()
-                except Exception:
-                    fallback_agents = []
-                if not fallback_agents:
-                    return None
-                agent_id = fallback_agents[0].id
-                mid = v["id"]
-                await self.redis.hset(k, mapping={
-                    "state": MissionState.ASSIGNED.value,
-                    "agent_id": agent_id,
-                    "updated_at": datetime.now(timezone.utc).isoformat(),
-                })
-                try:
-                    await db.mission.update(
-                        where={"id": mid},
-                        data={"status": MissionState.ASSIGNED.value, "agentId": agent_id}
-                    )
-                    await db.auditlog.create({
-                        "missionId": mid,
-                        "transition": "assign",
-                        "previousState": MissionState.QUEUED.value,
-                        "newState": MissionState.ASSIGNED.value,
-                        "actor": "orchestrator",
-                        "reason": f"Assigned to {agent_id}",
-                    })
-                except Exception:
-                    pass
-                try:
-                    await event_bus.publish_stream(
-                        "mission.events",
-                        MessageEnvelope(
-                            sender_id="orchestrator",
-                            recipient_id=agent_id,
-                            message_type="mission.assigned",
-                            payload={"mission_id": mid, "agent_id": agent_id}
-                        )
-                    )
-                except Exception:
-                    pass
-                MISSION_TRANSITIONS.labels(MissionState.QUEUED.value, MissionState.ASSIGNED.value).inc()
-                mv = await self.redis.hgetall(k)
-                return MissionStatus.model_validate({
-                    "id": mv["id"],
-                    "title": mv["title"],
-                    "state": MissionState.ASSIGNED,
-                    "priority": int(mv["priority"]),
-                    "agent_id": mv["agent_id"] or None,
-                    "created_at": datetime.fromisoformat(mv["created_at"]),
-                    "updated_at": datetime.fromisoformat(mv["updated_at"]),
-                })
-            scored.sort(key=lambda t: t[0], reverse=True)
-            agent_id = scored[0][1].id
+                scored = []
+                for a in agents:
+                    s = await score_agent(a)
+                    if s >= 0:
+                        scored.append((s, a))
+                
+                if scored:
+                    scored.sort(key=lambda t: t[0], reverse=True)
+                    agent_id = scored[0][1].id
+                else:
+                    # Fallback if no scored agents
+                    try:
+                        fallback_agents = await agent_registry.list_agents()
+                    except Exception:
+                        fallback_agents = []
+                    if not fallback_agents:
+                        return None
+                    agent_id = fallback_agents[0].id
+
+            # Proceed with Assignment
             mid = v["id"]
-
             await self.redis.hset(k, mapping={
                 "state": MissionState.ASSIGNED.value,
                 "agent_id": agent_id,
                 "updated_at": datetime.now(timezone.utc).isoformat(),
             })
-
+            
+            # ... (Rest of logic same as before, consolidating) ...
+            
             # Persistence & Audit
             try:
                 await db.mission.update(
@@ -265,7 +255,7 @@ class Orchestrator:
                     "previousState": MissionState.QUEUED.value,
                     "newState": MissionState.ASSIGNED.value,
                     "actor": "orchestrator",
-                    "reason": f"Assigned to {agent_id}",
+                    "reason": f"Assigned to {agent_id} (AI: {bool(selected_agent_id)})",
                 })
             except Exception as e:
                 logger.error(f"Persistence failed for assignment {mid}: {e}")

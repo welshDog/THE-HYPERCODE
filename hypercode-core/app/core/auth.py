@@ -55,6 +55,7 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    payload = None
     try:
         key = getattr(settings, "JWT_PUBLIC_KEY", None)
         if key:
@@ -74,23 +75,31 @@ async def get_current_user(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="JWT Public Key not configured"
             )
-
-        token_scopes = payload.get("scopes", [])
-        # Handle space-separated scopes string if that's the format
-        if isinstance(token_scopes, str):
-            token_scopes = token_scopes.split(" ")
-            
-        for scope in security_scopes.scopes:
-            if scope not in token_scopes:
-                 raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Not enough permissions",
-                    headers={"WWW-Authenticate": f"Bearer scope=\"{security_scopes.scope_str}\""},
-                )
-        return payload
-    except (JWTError, Exception):
+    except PyJWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token_scopes = payload.get("scopes", [])
+    # Handle space-separated scopes string if that's the format
+    if isinstance(token_scopes, str):
+        token_scopes = token_scopes.split(" ")
+        
+    for scope in security_scopes.scopes:
+        if scope not in token_scopes:
+                raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not enough permissions",
+                headers={"WWW-Authenticate": f"Bearer scope=\"{security_scopes.scope_str}\""},
+            )
+    return payload

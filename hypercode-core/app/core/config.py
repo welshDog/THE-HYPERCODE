@@ -1,5 +1,6 @@
 
 from pydantic_settings import BaseSettings
+from pydantic import model_validator
 from typing import Optional
 
 class Settings(BaseSettings):
@@ -16,10 +17,11 @@ class Settings(BaseSettings):
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
     
+    @model_validator(mode='after')
     def validate_security(self):
         # Allow dev/test bypass
-        if self.ENVIRONMENT.lower() in ("development", "test"):
-            return
+        if self.ENVIRONMENT.lower() in ("development", "test", "local"):
+            return self
         
         if not self.API_KEY:
             raise ValueError("API_KEY is missing in production/staging!")
@@ -29,6 +31,7 @@ class Settings(BaseSettings):
         
         if len(self.HYPERCODE_JWT_SECRET) < 32:
             raise ValueError(f"HYPERCODE_JWT_SECRET is too short ({len(self.HYPERCODE_JWT_SECRET)} chars). Must be at least 32 characters.")
+        return self
 
     # Rate Limiting
     RATE_LIMIT_WINDOW_SECONDS: int = 60

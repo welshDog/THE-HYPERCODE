@@ -49,6 +49,7 @@ model Memory {
   sessionId String?
   metadata  Json?
   keywords  String[]
+  embedding Json?    // Vector embedding (simulated as JSON array)
   missionId String?
   mission   Mission? @relation(fields: [missionId], references: [id])
   createdAt DateTime @default(now())
