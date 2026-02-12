@@ -164,7 +164,12 @@ class Orchestrator:
                         f"Mission: {v.get('title')}\n"
                         f"Requirements: {req_caps}\n"
                         f"Available Agents:\n{candidates_desc}\n\n"
-                        "Select the best agent ID for this mission. Return ONLY the agent ID."
+                        "You are the Intelligent Mission Router. "
+                        "Select the best agent for this mission based on capabilities and current status.\n"
+                        "Rules:\n"
+                        "1. Prefer agents with matching capabilities.\n"
+                        "2. Avoid 'busy' or 'offline' agents unless necessary.\n"
+                        "3. Return ONLY the agent ID (e.g. 'backend-specialist'). Do not add any explanation or punctuation."
                     )
                     ai_response = await llm_service.generate(prompt)
                     if ai_response:

@@ -7,7 +7,7 @@ try:
 except Exception:
     Instrumentator = None
     _instrumentator_available = False
-from app.routers import agents, memory, execution, metrics, engine, voice, orchestrator, simulator
+from app.routers import agents, memory, execution, metrics, engine, voice, orchestrator, simulator, dashboard
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.core.db import db
@@ -274,6 +274,19 @@ async def lifespan(app: FastAPI):
                 except Exception:
                     await asyncio.sleep(1.0)
 
+        async def _mission_assigner():
+            """Autonomous Mission Router: Continuously assigns queued missions."""
+            while True:
+                try:
+                    assigned = await orchestrator.assign_next()
+                    if assigned:
+                        print(f"Auto-assigned mission {assigned.id} to {assigned.agent_id}")
+                    else:
+                        # No missions or no agents, sleep longer
+                        await asyncio.sleep(5.0)
+                except Exception:
+                    await asyncio.sleep(5.0)
+
         try:
             env_lower = (settings.ENVIRONMENT or "").lower()
         except Exception:
@@ -282,6 +295,7 @@ async def lifespan(app: FastAPI):
             bg_tasks.append(asyncio.create_task(_mission_event_consumer()))
             bg_tasks.append(asyncio.create_task(_retry_scheduler()))
             bg_tasks.append(asyncio.create_task(_dlq_consumer()))
+            bg_tasks.append(asyncio.create_task(_mission_assigner()))
     except Exception:
         pass
     yield
@@ -321,6 +335,7 @@ app.include_router(engine.router, prefix="/engine", tags=["Engine"])
 app.include_router(voice.router, prefix="", tags=["Voice"])
 app.include_router(orchestrator.router, prefix="/orchestrator", tags=["Orchestrator"])
 app.include_router(simulator.router, prefix="/simulator", tags=["Simulator"])
+app.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
 
 @app.get("/health")
 async def health_check():
