@@ -3,6 +3,14 @@ import os
 from unittest.mock import patch, MagicMock
 import httpx
 from app.services.llm_service import LLMService
+from app.services.llm.factory import LLMFactory
+
+@pytest.fixture(autouse=True)
+def reset_llm_factory():
+    """Reset LLMFactory singleton to ensure isolation between tests"""
+    LLMFactory._instance = None
+    yield
+    LLMFactory._instance = None
 
 # Mock environment variables
 @pytest.fixture
@@ -29,21 +37,23 @@ def mock_env_disabled():
     with patch.dict(os.environ, {"ENABLE_AI_FEATURES": "false"}):
         yield
 
+from app.services.llm.ollama import OllamaProvider
+
 @pytest.mark.asyncio
 async def test_llm_service_init_defaults():
     # Test default initialization
     with patch.dict(os.environ, {}, clear=True):
         service = LLMService()
-        assert service.provider == "ollama"
-        assert service.ollama_url == "http://llama:11434"
+        assert isinstance(service.provider, OllamaProvider)
+        assert service.provider.base_url == "http://llama:11434"
         assert service.enabled is True
 
 @pytest.mark.asyncio
 async def test_llm_service_init_custom(mock_env_ollama):
     service = LLMService()
-    assert service.provider == "ollama"
-    assert service.ollama_url == "http://mock-ollama:11434"
-    assert service.ollama_model == "mock-model"
+    assert isinstance(service.provider, OllamaProvider)
+    assert service.provider.base_url == "http://mock-ollama:11434"
+    assert service.provider.model == "mock-model"
 
 @pytest.mark.asyncio
 async def test_generate_disabled(mock_env_disabled):

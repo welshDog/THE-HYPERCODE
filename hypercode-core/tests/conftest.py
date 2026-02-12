@@ -45,8 +45,17 @@ async def reset_sse_starlette_event():
     yield
 
 @pytest_asyncio.fixture(autouse=True)
-async def mock_redis(monkeypatch):
+async def mock_env_vars(monkeypatch):
+    """Ensure critical env vars are set for tests to prevent config validation errors"""
+    monkeypatch.setenv("HYPERCODE_DB_URL", "sqlite://")
+    monkeypatch.setenv("HYPERCODE_REDIS_URL", "redis://localhost:6379/0")
+    monkeypatch.setenv("API_KEY", "test-api-key")
+    monkeypatch.setenv("HYPERCODE_JWT_SECRET", "test-jwt-secret-at-least-32-chars-long")
     monkeypatch.setenv("OTLP_EXPORTER_DISABLED", "true")
+    yield
+
+@pytest_asyncio.fixture(autouse=True)
+async def mock_redis(monkeypatch):
     fake_redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
     
     # Patch the redis client in all services
