@@ -132,10 +132,28 @@ class Orchestrator:
     async def assign_next(self) -> MissionStatus | None:
         await self._ensure_redis()
         keys = await self.redis.keys("mission:*")
+        
+        # 1. Fetch and Filter Queued Missions
+        queued_missions = []
         for k in keys:
+            # We need to fetch basic info to check state and priority
+            # Optimization: We could use MGET if we knew the fields, but HGETALL is robust
             v = await self.redis.hgetall(k)
-            if v.get("state", "") != MissionState.QUEUED.value:
-                continue
+            if v.get("state", "") == MissionState.QUEUED.value:
+                queued_missions.append(v)
+        
+        if not queued_missions:
+            return None
+
+        # 2. Sort by Priority (Desc) then CreatedAt (Asc)
+        # Priority is string in Redis, convert to int
+        # CreatedAt is ISO string
+        queued_missions.sort(key=lambda x: (-int(x.get("priority", 0)), x.get("created_at", "")))
+
+        # 3. Try to assign top priority mission
+        for v in queued_missions:
+            k = await self._key(v["id"])
+            
             req_caps: list[str] = []
             try:
                 payload_raw = v.get("payload")
@@ -230,11 +248,16 @@ class Orchestrator:
                     agent_id = scored[0][1].id
                 else:
                     # Fallback if no scored agents
+                    # Instead of picking random fallback, maybe skip this mission and try next?
+                    # But for now, let's stick to existing logic or try next agent.
+                    # If no agent can take it, we shouldn't block the queue forever, but also shouldn't assign to bad agent.
+                    # Let's try to assign to *any* agent if possible, or skip.
                     try:
                         fallback_agents = await agent_registry.list_agents()
                     except Exception:
                         fallback_agents = []
                     if not fallback_agents:
+                        # No agents at all, can't assign anything.
                         return None
                     agent_id = fallback_agents[0].id
 
