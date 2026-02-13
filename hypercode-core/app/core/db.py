@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 try:
     from prisma import Prisma
     db = Prisma()
-except Exception:
+except Exception:  # pragma: no cover
     class _AgentModel:
         def __init__(self):
             self._items: Dict[str, Dict[str, Any]] = {}

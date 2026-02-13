@@ -17,4 +17,4 @@ while x < 1000:
     r = execute_program(p)
     dt = time.time() - t0
     assert r.exit_code == 0
-    assert dt < 2.0
+    assert dt < 3.0

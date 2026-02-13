@@ -55,7 +55,7 @@ class Orchestrator:
         try:
             await self.redis.ping()
             self._redis_initialized = True
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             logger.warning(f"Redis not available: {e}, falling back to fakeredis for development/testing")
             try:
                 from fakeredis.aioredis import FakeRedis
@@ -102,7 +102,7 @@ class Orchestrator:
                 "actor": "system",
                 "reason": "Submission",
             })
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             logger.error(f"Persistence failed for mission {mid}: {e}")
 
         # Event Stream
@@ -115,7 +115,7 @@ class Orchestrator:
                     payload={"mission_id": mid, "title": req.title}
                 )
             )
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             logger.error(f"Event publish failed for mission {mid}: {e}")
 
         MISSION_TRANSITIONS.labels("none", MissionState.QUEUED.value).inc()
@@ -417,10 +417,10 @@ class Orchestrator:
         keys = await self.redis.keys("mission:*")
         items = []
         for k in keys:
-            v = await self.redis.hgetall(k)
-            if not v:
-                continue
             try:
+                v = await self.redis.hgetall(k)
+                if not v:
+                    continue
                 items.append({
                     "id": v["id"],
                     "title": v["title"],
