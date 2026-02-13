@@ -29,7 +29,12 @@ def mock_orchestrator():
     mock.submit_report = AsyncMock()
     return mock
 
-def test_simulator_status(client):
+def test_simulator_status(client, mock_auth):
+    app.dependency_overrides[get_current_user] = mock_auth
+    
+    # Debug print
+    print(f"Overrides: {app.dependency_overrides}")
+    
     response = client.get("/simulator/status")
     assert response.status_code == 200
     assert response.json()["running"] is False

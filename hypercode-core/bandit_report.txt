@@ -1,0 +1,368 @@
+Run started:2026-02-13 09:58:34.151232+00:00
+
+Test results:
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\core\config.py:55:8
+54	            s.API_KEY = None
+55	        except Exception:
+56	            pass
+57	    return s
+
+--------------------------------------------------
+>> Issue: [B112:try_except_continue] Try, Except, Continue detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b112_try_except_continue.html
+   Location: app\routers\agents.py:39:32
+38	                                    STREAM_LATENCY_MS.labels("GET", "200", ENV_LABEL, VER_LABEL).observe(dt)
+39	                                except Exception:
+40	                                    continue
+41	                    else:
+
+--------------------------------------------------
+>> Issue: [B112:try_except_continue] Try, Except, Continue detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b112_try_except_continue.html
+   Location: app\routers\agents.py:51:32
+50	                                    STREAM_LATENCY_MS.labels("GET", "200", ENV_LABEL, VER_LABEL).observe(dt)
+51	                                except Exception:
+52	                                    continue
+53	                            await asyncio.sleep(idle_sleep)
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\routers\dashboard.py:84:8
+83	            await websocket.close()
+84	        except:
+85	            pass
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random
+   Location: app\routers\simulator.py:20:29
+19	            "checks": {
+20	                "cpu": round(random.uniform(0.05, 0.95), 3),
+21	                "mem": round(random.uniform(0.05, 0.95), 3),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random
+   Location: app\routers\simulator.py:21:29
+20	                "cpu": round(random.uniform(0.05, 0.95), 3),
+21	                "mem": round(random.uniform(0.05, 0.95), 3),
+22	                "latency_ms": int(random.uniform(5, 200)),
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random
+   Location: app\routers\simulator.py:22:34
+21	                "mem": round(random.uniform(0.05, 0.95), 3),
+22	                "latency_ms": int(random.uniform(5, 200)),
+23	                "status": "ok",
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\routers\simulator.py:28:8
+27	            await orchestrator.submit_report(mission_id, agent_id, payload)
+28	        except Exception:
+29	            pass
+30	        await asyncio.sleep(max(float(interval_sec), 1.0))
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\routers\simulator.py:62:4
+61	            _SIM_TASK.cancel()
+62	    except Exception:
+63	        pass
+64	    return {"status": "stopped", "config": _SIM_CFG}
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\routers\voice.py:115:8
+114	            await ws.close(code=status.WS_1011_INTERNAL_ERROR)
+115	        except Exception:
+116	            pass
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\services\agent_registry.py:189:12
+188	                await self.redis.set(f"agent:load:{agent_id}", str(load), ex=self.ttl)
+189	            except Exception:
+190	                pass
+191	            HEARTBEAT_COUNT.labels(self._env, self._ver).inc()
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\services\event_bus.py:104:8
+103	            await self.redis.xgroup_create(stream, group, id="$", mkstream=True)
+104	        except Exception:
+105	            # Group may already exist
+106	            pass
+107	
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\services\event_bus.py:119:8
+118	            await self.redis.xack(stream, group, entry_id)
+119	        except Exception:
+120	            pass
+121	
+
+--------------------------------------------------
+>> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
+   Severity: Low   Confidence: High
+   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random
+   Location: app\services\event_bus.py:129:25
+128	            if jitter is not None:
+129	                delay += random.uniform(-jitter, jitter)
+130	            sched = time.time() + max(0.0, delay)
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\services\event_bus.py:154:8
+153	            await self.redis.zrem("mission:retry:zset", mission_id)
+154	        except Exception:
+155	            pass
+156	
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\services\memory_service.py:162:8
+161	            memory.content = MemoryService._dec(memory.content)
+162	        except Exception:
+163	            pass
+164	
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\services\memory_service.py:175:12
+174	                await self.redis.expire(f"session:{data.sessionId}:memories", 86400) # 24h TTL
+175	            except Exception:
+176	                pass
+177	
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\services\memory_service.py:212:12
+211	                m.content = MemoryService._dec(m.content)
+212	            except:
+213	                pass
+214	
+
+--------------------------------------------------
+>> Issue: [B112:try_except_continue] Try, Except, Continue detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b112_try_except_continue.html
+   Location: app\services\memory_service.py:220:16
+219	                    emb = json.loads(emb)
+220	                except:
+221	                    continue
+222	            
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\services\memory_service.py:252:12
+251	                return Memory.parse_obj(cached)
+252	            except:
+253	                pass # Fallback to DB if parsing fails
+254	
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\services\memory_service.py:262:12
+261	                m.content = MemoryService._dec(m.content)
+262	            except Exception:
+263	                pass
+264	            # Update Cache
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\services\memory_service.py:295:12
+294	                memory.content = MemoryService._dec(memory.content)
+295	            except Exception:
+296	                pass
+297	                
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\services\memory_service.py:360:12
+359	                m.content = MemoryService._dec(m.content)
+360	            except Exception:
+361	                pass
+362	                
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\services\orchestrator.py:64:12
+63	                self._redis_initialized = True
+64	            except Exception:
+65	                pass
+66	
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\services\orchestrator.py:213:20
+212	                            return -1.0
+213	                    except Exception:
+214	                        pass
+215	                    # Capability match
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\services\orchestrator.py:340:20
+339	                            await self.redis.set(f"cb:open:{agent_id}", "1", ex=60)
+340	                    except Exception:
+341	                        pass
+342	        except Exception:
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\services\orchestrator.py:342:8
+341	                        pass
+342	        except Exception:
+343	            pass
+344	
+
+--------------------------------------------------
+>> Issue: [B112:try_except_continue] Try, Except, Continue detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b112_try_except_continue.html
+   Location: app\services\orchestrator.py:433:12
+432	                })
+433	            except Exception:
+434	                continue
+435	        items.sort(key=lambda x: x["created_at"], reverse=True)
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\services\orchestrator.py:464:8
+463	            AUDIT_RETRIEVE_LATENCY.labels("error").observe(time.perf_counter() - t0)
+464	        except Exception:
+465	            pass
+466	        return []
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\services\orchestrator.py:476:8
+475	            await self.redis.hset(k, mapping={"approved": "1", "updated_at": datetime.now(timezone.utc).isoformat()})
+476	        except Exception:
+477	            pass
+478	        try:
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\services\orchestrator.py:487:8
+486	            })
+487	        except Exception:
+488	            pass
+489	        mv = await self.redis.hgetall(k)
+
+--------------------------------------------------
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: app\services\voice_service.py:132:8
+131	            VOICE_AUDIO_RMS.observe(rms)
+132	        except Exception:
+133	            pass
+134	        return TranscriptChunk(text=text, confidence=confidence, language=language or "en")
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 4199
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 32
+		Medium: 0
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 0
+		High: 32
+Files skipped (0):

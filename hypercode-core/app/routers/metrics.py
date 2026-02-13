@@ -41,9 +41,9 @@ async def agent_stream_summary():
     base = os.getenv("PROMETHEUS_URL", "http://prometheus:9090")
     async with httpx.AsyncClient(timeout=3.0) as client:
         async def q(expr: str) -> float:
-            r = await client.get(f"{base}/api/v1/query", params={"query": expr})
-            j = r.json()
             try:
+                r = await client.get(f"{base}/api/v1/query", params={"query": expr})
+                j = r.json()
                 v = j["data"]["result"][0]["value"][1]
                 return float(v)
             except Exception:

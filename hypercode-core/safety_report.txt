@@ -1,0 +1,163 @@
+
+
+[33m[1m+===========================================================================================================================================================================================+[0m
+
+
+[31m[1mDEPRECATED: [0m[33m[1mthis command (`check`) has been DEPRECATED, and will be unsupported beyond 01 June 2024.[0m
+
+
+[32mWe highly encourage switching to the new [0m[32m[1m`scan`[0m[32m command which is easier to use, more powerful, and can be set up to mimic the deprecated command if required.[0m
+
+
+[33m[1m+===========================================================================================================================================================================================+[0m
+
+
++==============================================================================+
+
+                               /$$$$$$            /$$
+                              /$$__  $$          | $$
+           /$$$$$$$  /$$$$$$ | $$  \__//$$$$$$  /$$$$$$   /$$   /$$
+          /$$_____/ |____  $$| $$$$   /$$__  $$|_  $$_/  | $$  | $$
+         |  $$$$$$   /$$$$$$$| $$_/  | $$$$$$$$  | $$    | $$  | $$
+          \____  $$ /$$__  $$| $$    | $$_____/  | $$ /$$| $$  | $$
+          /$$$$$$$/|  $$$$$$$| $$    |  $$$$$$$  |  $$$$/|  $$$$$$$
+         |_______/  \_______/|__/     \_______/   \___/   \____  $$
+                                                          /$$  | $$
+                                                         |  $$$$$$/
+  by safetycli.com                                        \______/
+
++==============================================================================+
+
+ [1mREPORT[0m 
+
+  Safety [1mv3.7.0[0m is scanning for [1mVulnerabilities[0m[1m...[0m
+[1m  Scanning dependencies[0m in your [1menvironment:[0m
+
+  -> C:\Users\Lyndz\Downloads\HyperCode-V2.0\HyperCode-V2.0\.venv\Lib\site-
+  packages
+
+  Using [1mopen-source vulnerability database[0m
+[1m  Found and scanned 155 packages[0m
+  Timestamp [1m2026-02-13 10:02:20[0m
+[1m  5[0m[1m vulnerabilities reported[0m
+[1m  0[0m[1m vulnerabilities ignored[0m
+
++==============================================================================+
+ [1mVULNERABILITIES REPORTED[0m 
++==============================================================================+
+
+[31m-> Vulnerability found in sentry-sdk version 1.40.0[0m
+[1m   Vulnerability ID: [0m72260
+[1m   Affected spec: [0m<2.8.0
+[1m   ADVISORY: [0mAffected versions of Sentry's Python SDK are vulnerable
+   to unintentional exposure of environment variables to subprocesses despite
+   the env={} setting. In Python's 'subprocess' calls, all environment
+   variables are passed to subprocesses by default. However, if you
+   specifically do not want them to be passed to subprocesses, you may use
+   'env' argument in 'subprocess' calls. Due to the bug in Sentry SDK, with
+   the Stdlib integration enabled (which is enabled by default), this
+   expectation is not fulfilled, and all environment variables are being
+   passed to subprocesses instead. As a workaround, and if passing
+   environment variables to child processes poses a security risk for you,
+   you can disable all default integrations.
+[1m   CVE-2024-40647[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://data.safetycli.com/v/72260/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 72260 in safety’s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in python-jose version 3.3.0[0m
+[1m   Vulnerability ID: [0m70716
+[1m   Affected spec: [0m<3.4.0
+[1m   ADVISORY: [0mAffected versions of Python-jose allow attackers to
+   cause a denial of service (resource consumption) during a decode via a
+   crafted JSON Web Encryption (JWE) token with a high compression ratio, aka
+   a "JWT bomb." This is similar to CVE-2024-21319.
+[1m   CVE-2024-33664[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://data.safetycli.com/v/70716/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 70716 in safety’s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in python-jose version 3.3.0[0m
+[1m   Vulnerability ID: [0m70715
+[1m   Affected spec: [0m<3.4.0
+[1m   ADVISORY: [0mAffected versions of Python-jose have a algorithm
+   confusion vulnerability with OpenSSH ECDSA keys and other key formats.
+   This is similar to CVE-2022-29217.
+[1m   CVE-2024-33663[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://data.safetycli.com/v/70715/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 70715 in safety’s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in ecdsa version 0.19.1[0m
+[1m   Vulnerability ID: [0m64459
+[1m   Affected spec: [0m>=0
+[1m   ADVISORY: [0mThe python-ecdsa library, which implements ECDSA
+   cryptography in Python, is vulnerable to the Minerva attack
+   (CVE-2024-23342). This vulnerability arises because scalar multiplication
+   is not performed in constant time, affecting ECDSA signatures, key
+   generation, and ECDH operations. ECDSA signature verification remains
+   unaffected. The project maintainers have stated that there is no plan to
+   release a fix for this vulnerability, citing their security policy:"As
+   stated in the security policy, side-channel vulnerabilities are outside
+   the scope of the project. This is not due to a lack of interest in side-
+   channel secure implementations but rather because the main goal of the
+   project is to be pure Python. Implementing side-channel-free code in pure
+   Python is impossible. Therefore, we do not plan to release a fix for this
+   vulnerability."NOTE: The specs we include in this advisory differ from the
+   publicly available on other sources. That's because research by Safety CLI
+   Cybersecurity Team confirms that there is no plan to address this
+   vulnerability.
+[1m   CVE-2024-23342[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://data.safetycli.com/v/64459/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 64459 in safety’s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in ecdsa version 0.19.1[0m
+[1m   Vulnerability ID: [0m64396
+[1m   Affected spec: [0m>=0
+[1m   ADVISORY: [0mEcdsa does not protects against side-channel attacks.
+   This is because Python does not provide side-channel secure primitives
+   (with the exception of hmac.compare_digest()), making side-channel secure
+   programming impossible. For a sophisticated attacker observing just one
+   operation with a private key will be sufficient to completely reconstruct
+   the private key.https://pypi.org/project/ecdsa/#Security
+[1m   PVE-2024-64396[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://data.safetycli.com/v/64396/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 64396 in safety’s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
++==============================================================================+
+   [32m[1mREMEDIATIONS[0m
+
+  5 vulnerabilities were reported in 3 packages. For detailed remediation & 
+  fix recommendations, upgrade to a commercial license. 
+
++==============================================================================+
+
+ Scan was completed. 5 vulnerabilities were reported. 
+
++==============================================================================+[0m
+
+
+[33m[1m+===========================================================================================================================================================================================+[0m
+
+
+[31m[1mDEPRECATED: [0m[33m[1mthis command (`check`) has been DEPRECATED, and will be unsupported beyond 01 June 2024.[0m
+
+
+[32mWe highly encourage switching to the new [0m[32m[1m`scan`[0m[32m command which is easier to use, more powerful, and can be set up to mimic the deprecated command if required.[0m
+
+
+[33m[1m+===========================================================================================================================================================================================+[0m
+
+

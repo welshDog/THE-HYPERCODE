@@ -1,7 +1,8 @@
 
 from fastapi import HTTPException, Security, status, Depends
 from fastapi.security import APIKeyHeader, OAuth2PasswordBearer, SecurityScopes
-from jose import jwt, JWTError
+import jwt
+from jwt import PyJWTError
 from app.services.key_manager import key_manager
 from app.core.config import get_settings
 from typing import Optional
@@ -75,7 +76,7 @@ async def get_current_user(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="JWT Public Key not configured"
             )
-    except JWTError:
+    except PyJWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
