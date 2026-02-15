@@ -1,8 +1,8 @@
-from fastapi import APIRouter, HTTPException, Depends, Response, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, HTTPException, Depends, Security, Response, WebSocket, WebSocketDisconnect, status
 from sse_starlette.sse import EventSourceResponse
 from app.services.agent_registry import agent_registry, AGENT_STREAM_CLIENTS, STREAM_LATENCY_MS, ERROR_COUNT, _env as ENV_LABEL, _ver as VER_LABEL
 from app.schemas.agent import AgentMetadata, AgentRegistrationRequest, AgentHeartbeat
-from app.core.auth import verify_api_key
+from app.core.auth import get_current_user
 import logging
 import os
 import asyncio
@@ -63,16 +63,16 @@ async def sse_event_generator(one_shot: bool = False, max_failures: int | None =
     finally:
         AGENT_STREAM_CLIENTS.labels(ENV_LABEL, VER_LABEL).dec()
 
-@router.get("/", response_model=list[AgentMetadata])
+@router.get("/", response_model=list[AgentMetadata], dependencies=[Security(get_current_user, scopes=["agent:read"])])
 async def get_agents():
     return await agent_registry.list_agents()
 
-@router.post("/register", response_model=AgentMetadata)
+@router.post("/register", response_model=AgentMetadata, dependencies=[Security(get_current_user, scopes=["agent:register"])])
 async def register_agent(request: AgentRegistrationRequest):
     data, no_change = await agent_registry.register_agent(request)
     return data
 
-@router.post("/heartbeat")
+@router.post("/heartbeat", dependencies=[Security(get_current_user, scopes=["agent:heartbeat"])])
 async def heartbeat(heartbeat: AgentHeartbeat):
     success = await agent_registry.update_heartbeat(
         heartbeat.agent_id, 
@@ -83,7 +83,7 @@ async def heartbeat(heartbeat: AgentHeartbeat):
         raise HTTPException(status_code=404, detail="Agent not found")
     return {"status": "ok"}
 
-@router.delete("/{agent_id}")
+@router.delete("/{agent_id}", dependencies=[Security(get_current_user, scopes=["agent:register"])])
 async def deregister_agent(agent_id: str):
     await agent_registry.deregister_agent(agent_id)
     return {"status": "deregistered"}

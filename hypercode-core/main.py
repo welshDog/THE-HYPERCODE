@@ -7,7 +7,8 @@ try:
 except Exception:
     Instrumentator = None
     _instrumentator_available = False
-from app.routers import agents, memory, execution, metrics, engine, voice, orchestrator, simulator, dashboard
+
+from app.routers import agents, memory, execution, metrics, engine, voice, orchestrator, simulator, dashboard, crews
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.core.db import db
@@ -29,12 +30,14 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 import os
 import socket
 from urllib.parse import urlparse
+import structlog
 
 settings = get_settings()
 
 # CRITICAL SECURITY CHECK
 try:
-    settings.validate_security()
+    # Validate security settings (renamed method to match merged config.py)
+    settings.validate_security_settings()
 except ValueError as e:
     import sys
     print(f"CRITICAL SECURITY ERROR: {str(e)}")
@@ -43,6 +46,7 @@ except ValueError as e:
 
 # Initialize Logging
 configure_logging()
+logger = structlog.get_logger(__name__)
 
 def _host_resolves(host: str) -> bool:
     try:
@@ -93,8 +97,13 @@ async def lifespan(app: FastAPI):
 
     # Connect to Database - Fail if cannot connect
     print("Connecting to database...")
-    await db.connect()
-    print("Database connected.")
+    try:
+        await db.connect()
+        print("Database connected.")
+        logger.info("Database connected successfully")
+    except Exception as e:
+        logger.error("Database connection failed", error=str(e))
+        # raise e # Optionally raise to crash if DB is critical
 
     bg_tasks = []
     try:
@@ -102,8 +111,11 @@ async def lifespan(app: FastAPI):
         from app.services.event_bus import event_bus
         from app.schemas.message import MessageEnvelope
         from app.services.orchestrator import orchestrator
+        from app.services.watchdog import watchdog_service # Import Watchdog
         MAX_RETRIES = 5
         async def _heartbeat_sweep():
+            # Legacy heartbeat sweep - keeping for backward compatibility if needed
+            # but ideally replaced by watchdog
             while True:
                 try:
                     await agent_registry.check_timeouts()
@@ -111,6 +123,9 @@ async def lifespan(app: FastAPI):
                     pass
                 await asyncio.sleep(30)
         bg_tasks.append(asyncio.create_task(_heartbeat_sweep()))
+        
+        # Start Watchdog
+        bg_tasks.append(asyncio.create_task(watchdog_service.start()))
 
         async def _mission_event_consumer():
             try:
@@ -336,6 +351,7 @@ app.include_router(voice.router, prefix="", tags=["Voice"])
 app.include_router(orchestrator.router, prefix="/orchestrator", tags=["Orchestrator"])
 app.include_router(simulator.router, prefix="/simulator", tags=["Simulator"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
+app.include_router(crews.router, prefix="/crews", tags=["Crews"])
 
 @app.get("/health")
 async def health_check():
@@ -372,25 +388,8 @@ async def readiness_check():
     except Exception as e:
         status_data["redis"] = f"error: {str(e)}"
         is_ready = False
-        
-    if not is_ready:
-        from fastapi import Response
-        return Response(content=json.dumps(status_data), status_code=503, media_type="application/json")
+
+    if is_ready:
+        return status_data
     
-    return status_data
-
-
-# CORS for dashboard and agents
-# SEC-04: Restrict Permissive CORS
-import os
-origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173,http://localhost:8090")
-origins = [o.strip() for o in origins_str.split(",") if o.strip()]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"],
-    allow_headers=["Content-Type", "Authorization", "X-Request-ID", "X-API-Key"],
-    max_age=3600,
-)
+    return Response(content=json.dumps(status_data), status_code=503, media_type="application/json")

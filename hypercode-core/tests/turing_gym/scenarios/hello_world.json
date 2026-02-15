@@ -1,0 +1,20 @@
+{
+  "name": "Hello World Python",
+  "description": "Basic test to verify agent can write a simple Python script.",
+  "agent_role": "coder",
+  "prompt": "Write a Python script that prints 'Hello HyperCode' to hello.py",
+  "validation_rules": [
+    {
+      "type": "file_exists",
+      "target": "hello.py",
+      "description": "Verify hello.py was created"
+    },
+    {
+      "type": "file_content_match",
+      "target": "hello.py",
+      "regex_pattern": "print\\(['\"]Hello HyperCode['\"]\\)",
+      "description": "Verify script content matches requirements"
+    }
+  ],
+  "timeout_seconds": 30
+}
