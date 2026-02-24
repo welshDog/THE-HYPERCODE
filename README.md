@@ -1,5 +1,13 @@
 # THE HYPERCODE Monorepo
 
+<div align="center">
+  <h3>Part of the <a href="https://github.com/welshDog/My-GitHub-CareTaker">HyperCode Ecosystem</a> 🧠✨</h3>
+  <p>
+    <em>Programming languages express how minds think. We're building one that thinks like <strong>US</strong>.</em>
+  </p>
+</div>
+
+
 [![CI](https://github.com/welshDog/THE-HYPERCODE/actions/workflows/ci.yml/badge.svg)](https://github.com/welshDog/THE-HYPERCODE/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/welshDog/THE-HYPERCODE/branch/main/graph/badge.svg)](https://codecov.io/gh/welshDog/THE-HYPERCODE)
 [![Python](https://img.shields.io/badge/python-3.10-blue)](https://www.python.org/downloads/release/python-3100/)
