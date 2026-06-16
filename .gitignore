@@ -74,3 +74,7 @@ coverage.xml
 # Reports
 reports/
 hypercode-core/.env
+
+# HyperFocus Z0ne hooks
+.focus_session_start
+.claude/settings.local.json
