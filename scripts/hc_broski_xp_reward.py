@@ -15,17 +15,36 @@ from datetime import datetime
 
 _REDIS_CHANNEL = "broski_economy"
 _REDIS_DB = 1  # Sacred Rule: DB 1 = cache
+_REDIS_CONTAINER = "redis"  # internal redis (data-net) -- not published to host
 
 
 def _publish(channel, payload):
+    body = json.dumps(payload)
+    # 1) direct host TCP -- only works if redis 6379 is published to the host
     try:
         import redis
         r = redis.Redis(host="127.0.0.1", port=6379, db=_REDIS_DB, socket_connect_timeout=2)
         r.ping()
-        r.publish(channel, json.dumps(payload))
-        return True
+        r.publish(channel, body)
+        return "tcp"
     except Exception:
-        return False
+        pass
+    # 2) fallback: publish into the internal redis container via docker exec
+    #    keeps redis on its internal network (Sacred Rule: data-net internal)
+    try:
+        import shutil
+        import subprocess
+        if shutil.which("docker"):
+            proc = subprocess.run(
+                ["docker", "exec", _REDIS_CONTAINER, "redis-cli", "-n", str(_REDIS_DB),
+                 "PUBLISH", channel, body],
+                capture_output=True, text=True, timeout=8,
+            )
+            if proc.returncode == 0:
+                return "docker"
+    except Exception:
+        pass
+    return None
 
 
 def main() -> int:
@@ -45,12 +64,12 @@ def main() -> int:
         "timestamp": datetime.now().isoformat(),
     }
 
-    ok = _publish(_REDIS_CHANNEL, payload)
+    via = _publish(_REDIS_CHANNEL, payload)
 
-    if ok:
-        print("   PASS  Published " + str(args.xp) + " XP  reason=" + args.reason)
+    if via:
+        print("   PASS  Published " + str(args.xp) + " XP  reason=" + args.reason + "  (via " + via + ")")
     else:
-        print("   WARN  Redis offline -- XP award skipped (non-fatal)")
+        print("   WARN  Redis unreachable -- XP award skipped (non-fatal)")
 
     print()
     return 0
