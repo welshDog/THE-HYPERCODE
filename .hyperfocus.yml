@@ -1,0 +1,12 @@
+# HyperFocus Z0ne repo manifest - read by scripts/gen_repo_map.py
+# Edit this file, then re-run the generator. Never hand-edit the map.
+
+name: "THE-HYPERCODE"
+emoji: "🧠"
+tagline: "**The Language** — the HyperCode programming language itself (core/engine/visual-editor, MLIR-based IR)"
+category: "core"
+stack: "Python + TS"
+first_doc: "README.md"
+tier: "BUILDING"
+url: ""
+notes: "NOT a duplicate of HyperCode-V2.4 — this is the language, V2.4 is the platform"
